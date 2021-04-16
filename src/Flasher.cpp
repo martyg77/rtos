@@ -4,20 +4,24 @@
 #include <driver/gpio.h>
 #include "Flasher.h"
 
-Flasher::Flasher(gpio_num_t led, int speed)
+void flasher(void *p)
 {
-    this->led = led;
-    this->speed = speed;
+    Flasher::flasherConfig *c = (Flasher::flasherConfig *) p;
 
-    gpio_pad_select_gpio(led);
-    gpio_set_direction(led, GPIO_MODE_OUTPUT);
-    gpio_set_level(led, 0);
+    gpio_pad_select_gpio(c->led);
+    gpio_set_direction(c->led, GPIO_MODE_OUTPUT);
+    gpio_set_level(c->led, 0);
 
-    while (1)
+    while (true)
     {
-        gpio_set_level(led, 1);
-        vTaskDelay(speed / portTICK_PERIOD_MS);
-        gpio_set_level(led, 0);
-        vTaskDelay(speed * 3 / portTICK_PERIOD_MS);
+        gpio_set_level(c->led, 1);
+        vTaskDelay(c->speed / portTICK_PERIOD_MS);
+        gpio_set_level(c->led, 0);
+        vTaskDelay(c->speed * 3 / portTICK_PERIOD_MS);
     }
+}
+
+Flasher::Flasher(flasherConfig config) {
+    this->config = config;
+    xTaskCreate(flasher, "flasher", configMINIMAL_STACK_SIZE, (void *) &this->config, 0, &this->handle);
 }

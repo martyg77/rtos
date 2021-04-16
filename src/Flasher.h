@@ -1,11 +1,18 @@
 #include <driver/gpio.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
 
 class Flasher
 {
 public:
-    Flasher(gpio_num_t, int);
+    typedef struct {
+        gpio_num_t led;
+        int speed;
+    } flasherConfig;
+    
+    Flasher(flasherConfig);
 
 private:
-    gpio_num_t led = GPIO_NUM_NC;
-    int speed = 0;
+    flasherConfig config = { GPIO_NUM_NC, 0};
+    TaskHandle_t handle = NULL;
 };
