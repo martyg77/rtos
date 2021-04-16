@@ -11,6 +11,7 @@ public:
     } flasherConfig;
     
     Flasher(flasherConfig);
+    ~Flasher();
 
 private:
     flasherConfig config = { GPIO_NUM_NC, 0};

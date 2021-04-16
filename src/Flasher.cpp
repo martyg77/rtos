@@ -25,3 +25,7 @@ Flasher::Flasher(flasherConfig config) {
     this->config = config;
     xTaskCreate(flasher, "flasher", configMINIMAL_STACK_SIZE, (void *) &this->config, 0, &this->handle);
 }
+
+Flasher::~Flasher() {
+    vTaskDelete(this->handle);
+}
