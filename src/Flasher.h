@@ -6,7 +6,7 @@ class Flasher
 {
 public:
     typedef struct {
-        gpio_num_t led;
+        gpio_num_t pin;
         int speed;
     } flasherConfig;
     

@@ -10,20 +10,20 @@ void flasher(void *p)
 
     while (true)
     {
-        gpio_set_level(c->led, 1);
+        gpio_set_level(c->pin, 1);
         vTaskDelay(c->speed / portTICK_PERIOD_MS);
-        gpio_set_level(c->led, 0);
+        gpio_set_level(c->pin, 0);
         vTaskDelay(c->speed * 3 / portTICK_PERIOD_MS);
     }
 }
 
 Flasher::Flasher(flasherConfig c)
 {
-    gpio_pad_select_gpio(c.led); // PinMux magic
-    gpio_set_direction(c.led, GPIO_MODE_OUTPUT);
-    gpio_pullup_dis(c.led);
-    gpio_pulldown_dis(c.led);
-    gpio_intr_disable(c.led);
+    gpio_pad_select_gpio(c.pin); // PinMux magic
+    gpio_set_direction(c.pin, GPIO_MODE_OUTPUT);
+    gpio_pullup_dis(c.pin);
+    gpio_pulldown_dis(c.pin);
+    gpio_intr_disable(c.pin);
 
     this->config = c;
     xTaskCreate(flasher, "flasher", configMINIMAL_STACK_SIZE, (void *)&this->config, 0, &this->handle);
