@@ -8,6 +8,12 @@ void flasher(void *p)
 {
     Flasher::flasherConfig *c = (Flasher::flasherConfig *) p;
 
+    gpio_pad_select_gpio(c->pin); // PinMux magic
+    gpio_set_direction(c->pin, GPIO_MODE_OUTPUT);
+    gpio_pullup_dis(c->pin);
+    gpio_pulldown_dis(c->pin);
+    gpio_intr_disable(c->pin);
+
     while (true)
     {
         gpio_set_level(c->pin, 1);
@@ -19,14 +25,8 @@ void flasher(void *p)
 
 Flasher::Flasher(flasherConfig c)
 {
-    gpio_pad_select_gpio(c.pin); // PinMux magic
-    gpio_set_direction(c.pin, GPIO_MODE_OUTPUT);
-    gpio_pullup_dis(c.pin);
-    gpio_pulldown_dis(c.pin);
-    gpio_intr_disable(c.pin);
-
     this->config = c;
-    xTaskCreate(flasher, "flasher", configMINIMAL_STACK_SIZE, (void *)&this->config, 0, &this->handle);
+    xTaskCreate(flasher, "flasher", configMINIMAL_STACK_SIZE, (void *) &this->config, 0, &this->handle);
 }
 
 Flasher::~Flasher() {
