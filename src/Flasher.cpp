@@ -23,9 +23,10 @@ void flasher(void *p)
     }
 }
 
-Flasher::Flasher(flasherConfig c)
+Flasher::Flasher(gpio_num_t pin, int speed)
 {
-    this->config = c;
+    this->config.pin = pin;
+    this->config.speed = speed;
     xTaskCreate(flasher, "flasher", configMINIMAL_STACK_SIZE, (void *) &this->config, 0, &this->handle);
 }
 
