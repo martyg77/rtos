@@ -17,15 +17,19 @@ static void handler(void* p) {
     xQueueSendFromISR(x->q, &i, nullptr);
 }
  
+// void Button::task(void* p) {}
 void task(void* p) {
     gpio_num_t* pin = (gpio_num_t*) p;
     
+    // My KY-040 module has 3 pullups
+    // Switch signal is active low
+    // We only care about press, not release or persistent state
     gpio_config_t g = {
         .pin_bit_mask = (1ull << *pin),
         .mode = GPIO_MODE_INPUT,
         .pull_up_en = GPIO_PULLUP_DISABLE,
         .pull_down_en = GPIO_PULLDOWN_DISABLE,
-        .intr_type = GPIO_INTR_ANYEDGE};
+        .intr_type = GPIO_INTR_NEGEDGE};        
     gpio_config(&g);
 
     QueueHandle_t q = xQueueCreate(10, sizeof(int));
@@ -35,8 +39,13 @@ void task(void* p) {
     while (true) {
         int i;
         xQueueReceive(q, &i, portMAX_DELAY);
-        printf("Received %i \n", i);
+        printf("(%i) Received %i \n", xTaskGetTickCount(), i);
+
+        // (re)start the timer, when it pops after 50mS we have a stable signal
+     //   this->callback();
     }
+
+    vTaskDelete(NULL);
 }
 
 Button::Button(gpio_num_t pin)
@@ -44,6 +53,10 @@ Button::Button(gpio_num_t pin)
     this->pin = pin;
     xTaskCreate(task, "button", configMINIMAL_STACK_SIZE * 4, &this->pin, 0, &this->handle);
 }
+
+void Button::install_callback(ButtonFunction_t p) { this->callback = p; }
+
+void Button::wait_for_press() {}
 
 Button::~Button() {
     vTaskDelete(this->handle);
