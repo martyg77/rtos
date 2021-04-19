@@ -25,6 +25,7 @@ void taskFunction(void* p) {
     // My KY-040 module has 3 pullups
     // Switch signal is active low
     // We only care about press, not release or persistent state
+    gpio_pad_select_gpio(*pin); // PinMux magic
     gpio_config_t g = {
         .pin_bit_mask = (1ull << *pin),
         .mode = GPIO_MODE_INPUT,
