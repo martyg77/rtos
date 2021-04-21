@@ -58,12 +58,12 @@ void taskFunction(void* p) {
     vTaskDelete(NULL);
 }
 
-Button::Button(gpio_num_t pin)
+Button::Button(gpio_num_t p)
 {
-    this->pin = pin;
+    pin = p;
     xTaskCreate(taskFunction, "button", configMINIMAL_STACK_SIZE * 4, &this->pin, 0, &this->task);
 }
 
 Button::~Button() {
-    vTaskDelete(this->task);
+    vTaskDelete(task);
 }
