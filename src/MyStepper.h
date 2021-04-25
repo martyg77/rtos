@@ -20,6 +20,6 @@ private:
     gpio_num_t DIR = GPIO_NUM_NC;
     gpio_num_t STEP = GPIO_NUM_NC;
     
-    bool clockwiseRotation = false;
+    bool clockwiseRotation = false; // TODO Use signed velocity and eliminate
     void setRotation(bool clockwise);
 };

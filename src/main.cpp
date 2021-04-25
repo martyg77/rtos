@@ -9,7 +9,7 @@ const gpio_num_t GPIO_LED_GREEN = GPIO_NUM_2;
 const gpio_num_t GPIO_LED_BLUE = GPIO_NUM_4;
 
 // Flasher red(GPIO_LED_RED, 250);
-// Flasher green(GPIO_LED_GREEN, 300);
+Flasher green(GPIO_LED_GREEN, 300);
 // Flasher blue(GPIO_LED_BLUE, 500);
 
 // Button ky040_button(GPIO_NUM_25);
@@ -18,7 +18,7 @@ const gpio_num_t GPIO_LED_BLUE = GPIO_NUM_4;
 
 MyStepper stepper(GPIO_NUM_5, GPIO_NUM_19, GPIO_NUM_18);
 
-const int motorSteps = 200; // 200 steps/rev 
+const int motorSteps = 200; // 200 steps/revolution
 const int motorMicroSteps = 8; // 8 microsteps/step (MS[01] straps)
 const int motorRPM = 120; // current motor speed
 const int motorStepVelocity = motorRPM * motorSteps * motorMicroSteps / 60; // current microsteps/sec, not to exceed fCLK/512 = 23400
@@ -34,7 +34,7 @@ void app_main()
     stepper.clockwise();
     while (true) {
         vTaskDelay(1000 / portTICK_PERIOD_MS);
-        for (int i = 0; i < 5* motorSteps * motorMicroSteps; i++) {
+        for (int i = 0; i < 5 * motorSteps * motorMicroSteps; i++) {
             stepper.step();
             ets_delay_us(1000000 / motorStepVelocity); // uS between (evenly spaced) processor step pulses
         }
