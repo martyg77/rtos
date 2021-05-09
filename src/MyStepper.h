@@ -1,11 +1,10 @@
-#include <freertos/FreeRTOS.h>
 #include <driver/gpio.h>
+#include <freertos/FreeRTOS.h>
 
 // TMC2209 controller, no-name 17HS4401 NEMA-17 stepper motor
 
-class MyStepper
-{
-public:
+class MyStepper {
+   public:
     MyStepper(gpio_num_t en, gpio_num_t dir, gpio_num_t step);
     ~MyStepper();
 
@@ -15,11 +14,13 @@ public:
 
     void step();
 
-private:
+    void demo(); // TODO This procedure never returns
+
+   private:
     gpio_num_t EN = GPIO_NUM_NC;
     gpio_num_t DIR = GPIO_NUM_NC;
     gpio_num_t STEP = GPIO_NUM_NC;
-    
-    bool clockwiseRotation = false; // TODO Use signed velocity and eliminate
+
+    bool clockwiseRotation = false;  // TODO Use signed velocity and eliminate
     void setRotation(bool clockwise);
 };

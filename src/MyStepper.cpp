@@ -24,6 +24,24 @@ void MyStepper::step() {
     // ets_delay_us(1); // tSL = tCLK + 20 = 104nS << 1uS
 }
 
+const int motorSteps = 200;                                                  // 200 steps/revolution
+const int motorMicroSteps = 8;                                               // 8 microsteps/step (MS[01] straps)
+const int motorRPM = 120;                                                    // current motor speed
+const int motorStepVelocity = motorRPM * motorSteps * motorMicroSteps / 60;  // current microsteps/sec, not to exceed fCLK/512 = 23400
+
+void MyStepper::demo() {
+    // Demo loop: 5 revolutions, stop, reverse, repeat
+    clockwise();
+    while (true) {
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        for (int i = 0; i < 5 * motorSteps * motorMicroSteps; i++) {
+            step();
+            ets_delay_us(1000000 / motorStepVelocity);  // uS between (evenly spaced) processor step pulses
+        }
+        reverse();
+    }
+}
+
 MyStepper::MyStepper(gpio_num_t e, gpio_num_t d, gpio_num_t s) {
     EN = e;
     DIR = d;
