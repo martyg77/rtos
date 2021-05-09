@@ -11,6 +11,8 @@ LVGL is still under active development
 Finding the right combination of branches that work on esp-idf has been a chore
 The https://github.com/lvgl/lv_port_esp32 repo points to a working set of commits to start with
 
+When installing lvgl to components, tweak its CMakeLists.txt and remove reference to "main"
+
 For the record:
 lvgl @ b55ee6a
 lvgl_esp32_drivers @ 9fed1cc
