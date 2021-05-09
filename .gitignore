@@ -1,2 +1,4 @@
 .pio
 .vscode
+components
+sdkconfig.old
