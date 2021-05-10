@@ -10,17 +10,15 @@ typedef struct {
     gpio_num_t pinB;
     QueueHandle_t queue;
     int16_t value;
+    int16_t deltaPrev;
 } encoderProcess_t;
 
-void encoderGpioHandler(void* p) {
-    encoderProcess_t* tcb = (encoderProcess_t*) p;
+void encoderGpioHandler(encoderProcess_t* tcb) {
     uint8_t ab = (gpio_get_level(tcb->pinA) << 1) | gpio_get_level(tcb->pinB);
     xQueueSendFromISR(tcb->queue, &ab, NULL);
 }
 
-void encoderProcess(void* p) {
-    encoderProcess_t* tcb = (encoderProcess_t*) p;
-    
+void encoderProcess(encoderProcess_t* tcb) {
     // My KY-040 module has 3 pullups
     gpio_pad_select_gpio(tcb->pinA); // PinMux magic
     gpio_pad_select_gpio(tcb->pinB); // PinMux magic
@@ -33,8 +31,8 @@ void encoderProcess(void* p) {
     gpio_config(&g);
 
     tcb->queue = xQueueCreate(16, sizeof(uint8_t));
-    gpio_isr_handler_add(tcb->pinA, encoderGpioHandler, tcb);
-    gpio_isr_handler_add(tcb->pinB, encoderGpioHandler, tcb);
+    gpio_isr_handler_add(tcb->pinA, (gpio_isr_t)encoderGpioHandler, tcb);
+    gpio_isr_handler_add(tcb->pinB, (gpio_isr_t)encoderGpioHandler, tcb);
 
     uint8_t state = 0;
     while (true) {
@@ -51,15 +49,24 @@ void encoderProcess(void* p) {
     vTaskDelete(NULL);
 }
 
+int Encoder::value() { return ((encoderProcess_t*)tcb)->value; };
+
+int Encoder::delta() {
+    encoderProcess_t* p = (encoderProcess_t*) tcb;
+    int d = p->value - p->deltaPrev;
+    p->deltaPrev = p->value;
+    return d;
+};
+
 Encoder::Encoder(gpio_num_t pinCLK, gpio_num_t pinDT) {
     // These two signals are interchangable
     pinA = pinCLK; 
     pinB = pinDT;
-    tcb = new(encoderProcess_t) { pinA, pinB, NULL, 0 };
-    xTaskCreate(encoderProcess, "encoder", configMINIMAL_STACK_SIZE * 4, tcb, 0, &task);
+    tcb = new(encoderProcess_t) { pinA, pinB, NULL, 0, 0 };
+    xTaskCreate((TaskFunction_t)encoderProcess, "encoder", configMINIMAL_STACK_SIZE * 4, tcb, 0, &task);
 }
 
 Encoder::~Encoder() {
-    delete((encoderProcess_t*) tcb);
+    delete((encoderProcess_t*)tcb);
     vTaskDelete(task);
 }

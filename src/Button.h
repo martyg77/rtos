@@ -7,14 +7,17 @@
 // As seen on KY-040 rotary encoder
 
 class Button {
-   public:
+public:
     Button(gpio_num_t pin);
+    ~Button();
 
     const static int debounce_mS = 50;
 
-    ~Button();
+    bool pressed(); // Current button state (polling API)
+    // TODO callback based interface
 
-   private:
+private:
     gpio_num_t pin = GPIO_NUM_NC;
     TaskHandle_t task = NULL;
+    void* tcb = NULL;
 };
