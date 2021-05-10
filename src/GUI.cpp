@@ -7,7 +7,6 @@
 #include "freertos/task.h"
 #include "esp_freertos_hooks.h" // TODO order sensitive
 
-#define LV_LVGL_H_INCLUDE_SIMPLE
 #include "lvgl.h"
 #include "lvgl_helpers.h"
 #include "lv_examples/src/lv_demo_widgets/lv_demo_widgets.h"
