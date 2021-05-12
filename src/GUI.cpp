@@ -12,6 +12,7 @@
 #include "lv_examples/src/lv_demo_widgets/lv_demo_widgets.h"
 #include "lv_examples/src/lv_demo_keypad_encoder/lv_demo_keypad_encoder.h"
 #include "GUI.h"
+#include "TinyOLED.h"
 
 #include "Button.h"
 #include "Encoder.h"
@@ -50,8 +51,14 @@ void guiProcess(void* p) {
     lv_disp_drv_t display;
     lv_disp_drv_init(&display);
     display.buffer = &buffer;
-    display.flush_cb = disp_driver_flush;
+//  display.flush_cb = disp_driver_flush;
+    TinyOLED oled(0, GPIO_NUM_21, GPIO_NUM_22);
+    display.flush_cb = oled.flush_cb;
     lv_disp_drv_register(&display);
+
+    oled.demo();
+    vTaskDelay(5000 / portTICK_PERIOD_MS);
+    esp_restart();
 
     // Output (video) driver
     lvgl_driver_init();
