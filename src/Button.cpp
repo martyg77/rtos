@@ -27,8 +27,6 @@ void buttonTimerCallBack(TimerHandle_t x) {
 void buttonProcess(buttonProcess_t* tcb) {
     // My KY-040 module has 3 pullups
     // Switch signal is active low
-    // We only care about press, not release or persistent state
-    // TODO Incorrect - LVGL will poll for pressed/released
     gpio_pad_select_gpio(tcb->pin);  // PinMux magic
     gpio_config_t g = {
         .pin_bit_mask = (1ull << tcb->pin),
