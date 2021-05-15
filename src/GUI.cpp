@@ -13,7 +13,7 @@
 #include "lv_examples/src/lv_demo_keypad_encoder/lv_demo_keypad_encoder.h"
 
 #include "GUI.h"
-#include "MicroOLED.h"
+#include "SSD1306.h"
 #include "Button.h"
 #include "Encoder.h"
 
