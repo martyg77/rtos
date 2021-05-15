@@ -11,10 +11,10 @@
 #include <driver/i2c.h>
 #include "lvgl.h"
 
-class MicroOLED {
+class SSD1306 {
 public:
-    MicroOLED(gpio_num_t sda, gpio_num_t scl);
-    ~MicroOLED();
+    SSD1306(gpio_num_t sda, gpio_num_t scl);
+    ~SSD1306();
     
 private:
     gpio_num_t sda = GPIO_NUM_NC;

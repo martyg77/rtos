@@ -6,7 +6,7 @@
 #include "lv_themes/lv_theme_mono.h"
 #include "lv_font/lv_font.h"
 
-void MicroOLED::i2cDispatch(uint8_t prefix, uint8_t *msg, int len)
+void SSD1306::i2cDispatch(uint8_t prefix, uint8_t *msg, int len)
 {
     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
     i2c_master_start(cmd);
@@ -18,7 +18,7 @@ void MicroOLED::i2cDispatch(uint8_t prefix, uint8_t *msg, int len)
     i2c_cmd_link_delete(cmd);
 }
 
-MicroOLED::MicroOLED(gpio_num_t a, gpio_num_t l) {
+SSD1306::SSD1306(gpio_num_t a, gpio_num_t l) {
     sda = a;
     scl = l;
 
@@ -67,6 +67,7 @@ MicroOLED::MicroOLED(gpio_num_t a, gpio_num_t l) {
     i2cDispatch(OLED_CONTROL_BYTE_CMD_STREAM, msg, sizeof(msg));
 
     // Initialize LVGL susbsystem with monochrome theme
+    // TODO this belongs in GUI task?  How would a 3rd party driver interface into GUI?
     displayBuffer = (uint8_t *) malloc(displayBufferSize);
     lv_disp_buf_init(&buffer, displayBuffer, NULL, displayBufferSize);
 
@@ -84,7 +85,7 @@ MicroOLED::MicroOLED(gpio_num_t a, gpio_num_t l) {
                            &lv_font_unscii_8, &lv_font_unscii_8, &lv_font_unscii_8));
 }
 
-MicroOLED::~MicroOLED() {
+SSD1306::~SSD1306() {
     free(displayBuffer);
     // TODO unregister display and i2c port
 }
@@ -92,7 +93,7 @@ MicroOLED::~MicroOLED() {
 // Bitbang pixels into format conformant to hardware layout, ref. ssd1306 datasheet Fig. 10-2
 // Supplying this callback implements a custom-packed displayBuffer, essentially redefining lv_color_t 
 
-void MicroOLED::set_px_cb(lv_disp_drv_t *drv, uint8_t *buf, lv_coord_t buf_w, lv_coord_t x, lv_coord_t y,
+void SSD1306::set_px_cb(lv_disp_drv_t *drv, uint8_t *buf, lv_coord_t buf_w, lv_coord_t x, lv_coord_t y,
                           lv_color_t color, lv_opa_t opa) 
 {
     uint16_t byte = (y >> 3) * buf_w + x;
@@ -109,15 +110,15 @@ void MicroOLED::set_px_cb(lv_disp_drv_t *drv, uint8_t *buf, lv_coord_t buf_w, lv
 
 // Adjust supplied display area so it aligns to displayBuffer byte boundaries
 
-void MicroOLED::rounder_cb(lv_disp_drv_t *drv, lv_area_t *area) {
-    area->y1 = area->y1 & ~0x7;
-    area->y2 = area->y2 | 0x7;
+void SSD1306::rounder_cb(lv_disp_drv_t *drv, lv_area_t *area) {
+    area->y1 &= ~0x7;
+    area->y2 |= 0x7;
 }
     
 // Transmit rectangular area of displayBuffer to ssd1306 hardware
-// LVGL passes back the structure we filled in set_px_cb so np futher reformatting is necessary
+// LVGL passes back the structure we filled in set_px_cb so no futher reformatting is necessary
 
-void MicroOLED::flush_cb(lv_disp_drv_t *drv, const lv_area_t *area, lv_color_t *buf) {
+void SSD1306::flush_cb(lv_disp_drv_t *drv, const lv_area_t *area, lv_color_t *buf) {
     uint8_t p1 = area->y1 >> 3;
     uint8_t p2 = area->y2 >> 3;
 
