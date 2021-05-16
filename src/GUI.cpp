@@ -158,12 +158,12 @@ bool timerCallBack(void) {
 // Could be the same as main task, but need to control affinity, priority, etc.
 
 void guiProcess(void* p) {
- // ILI9341 lcd(); // RESET 18 SCL 19 DC 21 CS 22 SDA 23 SDO 25 Backlight 5
+//  ILI9341 lcd(); // RESET 18 SCL 19 DC 21 CS 22 SDA 23 SDO 25 Backlight 5
     SSD1306 oled(GPIO_NUM_21, GPIO_NUM_22);
 
     // Rotary encoder for input
     encoder = new Encoder(GPIO_NUM_26, GPIO_NUM_27);
-    button = new Button(GPIO_NUM_25); // TODO conflicts with wrover-kit SDO
+    button = new Button(GPIO_NUM_34);
     lv_indev_drv_t encoder;
     lv_indev_drv_init(&encoder);
     encoder.type = LV_INDEV_TYPE_ENCODER;
