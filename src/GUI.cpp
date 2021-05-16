@@ -19,38 +19,61 @@
 
 // Encoder and button input, feedback to screen
 // Real-time data output
-// Basic LVGL scheduling (timer)
+// Basic LVGL scheduling (timer) for lv_task_handler()
 // Async events from other tasks
-// Banner can just scroll a text string for now
 // GUI is all-knowing application-aware, should be topmost on include tree, coupled to application class
-// Could be the same as main task, but need to control affinity, priority, etc.
 
-lv_obj_t *scr= NULL;
-lv_obj_t *banner= NULL;
-lv_obj_t *body= NULL;
-lv_obj_t *accelX= NULL;
-lv_obj_t *accelY= NULL;
-lv_obj_t *accelZ= NULL;
-lv_obj_t *gyroX= NULL;
-lv_obj_t *gyroY= NULL;
-lv_obj_t *gyroZ= NULL;
-lv_obj_t *obj = NULL;
+// Update values on screen by updating these objects from the GUI task timeslice
+lv_obj_t *accelX = NULL;
+lv_obj_t *accelY = NULL;
+lv_obj_t *accelZ = NULL;
+lv_obj_t *gyroX = NULL;
+lv_obj_t *gyroY = NULL;
+lv_obj_t *gyroZ = NULL;
+
+static void encoder_cb(lv_obj_t * obj, lv_event_t event) {
+    printf("[0x%08x] ", (uint32_t) obj);
+    switch (event) {
+    case LV_EVENT_PRESSED:
+        printf("Pressed\n");
+        break;
+
+    case LV_EVENT_RELEASED:
+        printf("Released\n");
+        break;
+
+    case LV_EVENT_KEY:
+        printf("Key\n");
+        break;
+
+    case LV_EVENT_FOCUSED: // TODO highlight object border
+        printf("Focus\n");
+        break;
+
+    case LV_EVENT_DEFOCUSED:
+        printf("Defocus\n");
+        break;
+
+    default:
+        printf("Unknown %i\n", event);
+    }
+}
 
 void statusScreen() {
-    scr = lv_obj_create(NULL, NULL);
+    lv_obj_t *scr = lv_obj_create(NULL, NULL);
     lv_scr_load(scr);
    
-    obj = lv_obj_create(scr, NULL);
+    lv_obj_t *obj = lv_obj_create(scr, NULL);
     lv_obj_set_pos(obj, 0, 0);
     lv_obj_set_size(obj, 128, 16);
-    banner = lv_label_create(obj, NULL);
+    lv_obj_t *banner = lv_label_create(obj, NULL);
     lv_label_set_long_mode(banner, LV_LABEL_LONG_SROLL_CIRC);
     lv_obj_set_width(banner, 128);
     lv_label_set_anim_speed(banner, 10); // pixels/sec
     lv_label_set_text(banner, "The quick brown fox jumped over the lazy dog");
     lv_obj_align(banner, obj, LV_ALIGN_CENTER, 0, 0);
 
-    body = lv_obj_create(scr, NULL);
+    lv_obj_t *body = lv_obj_create(scr, NULL);
     lv_obj_set_pos(body, 0, 16);
     lv_obj_set_size(body, 128, 48);
 
@@ -59,38 +82,46 @@ void statusScreen() {
     lv_obj_align(obj, body, LV_ALIGN_IN_TOP_LEFT, 0, 0);
     accelX = lv_label_create(obj, NULL);
     lv_obj_align(accelX, obj, LV_ALIGN_CENTER, 0, 0);
+    lv_label_set_align(accelX, LV_LABEL_ALIGN_RIGHT); // TODO this does not work
+    lv_obj_set_event_cb(accelX, encoder_cb);
+//  lv_group_focus_obj(accelX);
 
     obj = lv_obj_create(body, obj);
     lv_obj_align(obj, body, LV_ALIGN_IN_TOP_MID, 0, 0);
     accelY = lv_label_create(obj, NULL);
     lv_obj_align(accelY, obj, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_set_event_cb(accelY, encoder_cb);
 
     obj = lv_obj_create(body, obj);
     lv_obj_align(obj, body, LV_ALIGN_IN_TOP_RIGHT, 0, 0);
     accelZ = lv_label_create(obj, NULL);
     lv_obj_align(accelZ, obj, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_set_event_cb(accelZ, encoder_cb);
     
     obj = lv_obj_create(body, obj);
     lv_obj_align(obj, body, LV_ALIGN_IN_BOTTOM_LEFT, 0, 0);
     gyroX = lv_label_create(obj, NULL);
     lv_obj_align(gyroX, obj, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_set_event_cb(gyroX, encoder_cb);
    
     obj = lv_obj_create(body, obj);
     lv_obj_align(obj, body, LV_ALIGN_IN_BOTTOM_MID, 0, 0);
     gyroY = lv_label_create(obj, NULL);
     lv_obj_align(gyroY, obj, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_set_event_cb(gyroY, encoder_cb);
 
     obj = lv_obj_create(body, obj);
     lv_obj_align(obj, body, LV_ALIGN_IN_BOTTOM_RIGHT, 0, 0);
     gyroZ = lv_label_create(obj, NULL);
     lv_obj_align(gyroZ, obj, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_set_event_cb(gyroZ, encoder_cb);
 
-    lv_label_set_text(accelX, "111");
-    lv_label_set_text(accelY, "567");
-    lv_label_set_text(accelZ, "-61");
-    lv_label_set_text(gyroX, "320");
-    lv_label_set_text(gyroY, "-111");
-    lv_label_set_text(gyroZ, "9");
+    lv_label_set_text_fmt(accelX, "%i", 111);
+    lv_label_set_text_fmt(accelY, "%i", 567);
+    lv_label_set_text_fmt(accelZ, "%i", -61);
+    lv_label_set_text_fmt(gyroX, "%i", 320);
+    lv_label_set_text_fmt(gyroY, "%i", -111);
+    lv_label_set_text_fmt(gyroZ, "%i", 9);
 }
 
 // LVGL 10mS tick timebase, called directly from rtos timer interrupt
@@ -102,6 +133,7 @@ bool timerCallBack(void) {
 
 Encoder *encoder = NULL;
 Button *button = NULL;
+lv_indev_t* ky040_device = NULL; // TODO hacked global for lv_demo_keypad_encoder
 
 bool guiEncoderRead(lv_indev_drv_t* p, lv_indev_data_t* d) {
 //  d->point = {0, 0};
@@ -113,26 +145,67 @@ bool guiEncoderRead(lv_indev_drv_t* p, lv_indev_data_t* d) {
 }
 
 // GUI Task
+// Could be the same as main task, but need to control affinity, priority, etc.
 
 void guiProcess(void* p) {
 
-    SSD1306 oled(GPIO_NUM_21, GPIO_NUM_22);
+#define demomode
+#ifdef demomode
+
+    // Allocate DMA-capable memory for display double-buffering
+    lv_color_t* buf1 = (lv_color_t*)heap_caps_malloc(DISP_BUF_SIZE * sizeof(lv_color_t), MALLOC_CAP_DMA);
+    lv_color_t* buf2 = (lv_color_t*)heap_caps_malloc(DISP_BUF_SIZE * sizeof(lv_color_t), MALLOC_CAP_DMA);
+    assert(buf1 != NULL);
+    assert(buf2 != NULL);
+
+    // Initialize LVGL susbsystem
+    lv_init();
+    lv_disp_buf_t buffer;
+    lv_disp_buf_init(&buffer, buf1, buf2, DISP_BUF_SIZE);
+    lv_disp_drv_t display;
+    lv_disp_drv_init(&display);
+    display.buffer = &buffer;
+    display.flush_cb = disp_driver_flush;
+    lv_disp_drv_register(&display);
+
+    // Rotary encoder for input
     Encoder ky040_encoder(GPIO_NUM_26, GPIO_NUM_27);
     Button ky040_button(GPIO_NUM_25);
     encoder = &ky040_encoder;
     button = &ky040_button;
+    lv_indev_drv_t encoder;
+    lv_indev_drv_init(&encoder);
+    encoder.type = LV_INDEV_TYPE_ENCODER;
+    encoder.read_cb = guiEncoderRead;
+    encoder.feedback_cb = NULL;
+    ky040_device = lv_indev_drv_register(&encoder); // TODO hacked into lv_demo_keypad_encoder
+
+    // User application
+//  lv_demo_widgets();
+    lvgl_driver_init();
+//  lv_demo_keypad_encoder();
+
+#else // demomode
+
+    SSD1306 oled(GPIO_NUM_21, GPIO_NUM_22);
 
     // Rotary encoder with pushbutton for input
+    // TODO why can't I move this before display init?
+    encoder = new Encoder(GPIO_NUM_26, GPIO_NUM_27);
+    button = new Button(GPIO_NUM_25);
     lv_indev_drv_t d;
     lv_indev_drv_init(&d);
     d.type = LV_INDEV_TYPE_ENCODER;
     d.read_cb = guiEncoderRead;
     d.feedback_cb = NULL;
-    lv_indev_t *indev = lv_indev_drv_register(&d);
+    ky040_device = lv_indev_drv_register(&d);
+
+#endif //demomode
 
     // Output screen objects
     statusScreen();
    
+    // Focus group
     lv_group_t *g = lv_group_create();
     lv_group_add_obj(g, accelX);
     lv_group_add_obj(g, accelY);
@@ -140,8 +213,9 @@ void guiProcess(void* p) {
     lv_group_add_obj(g, gyroX);
     lv_group_add_obj(g, gyroY);
     lv_group_add_obj(g, gyroZ);
-    lv_indev_set_group(indev, g);
- 
+    lv_indev_set_group(ky040_device, g);
+//  lv_group_focus_obj(accelX);
+
     // LVGL tick timer, runs every RTOS tick (10mS) at high priority
     esp_register_freertos_idle_hook_for_cpu(timerCallBack, guiCpuCore);
 

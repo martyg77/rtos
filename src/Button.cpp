@@ -52,7 +52,7 @@ void buttonProcess(buttonProcess_t* tcb) {
         } while (xTimerIsTimerActive(timer));
 
         tcb->state = !gpio_get_level(tcb->pin);
-        printf("(%i) Button %i\n", xTaskGetTickCount(), tcb->state);
+    //  printf("(%i) Button %i\n", xTaskGetTickCount(), tcb->state);
     }
 
     // We should never reach this point
