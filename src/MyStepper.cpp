@@ -1,13 +1,14 @@
-#include <freertos/FreeRTOS.h>
-#include "freertos/task.h"
-#include <esp32/rom/ets_sys.h>
-#include <driver/gpio.h>
 #include "MyStepper.h"
+
+#include <driver/gpio.h>
+#include <esp32/rom/ets_sys.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
 
 // Ref. TMS2209 datasheet, section 13, "STEP/DIR Interface"
 // CLK pin strapped low for internal clocking (fclk = 12MHz, tclk = 83.3nS)
 
-void MyStepper::setRotation(bool r) {
+void MyStepper::setRotation(const bool r) {
     gpio_set_level(DIR, r);
     clockwiseRotation = r;
     // ets_delay_us(1); // tDSU = 20ns << 1uS
@@ -15,7 +16,7 @@ void MyStepper::setRotation(bool r) {
 
 void MyStepper::clockwise() { setRotation(true); }
 void MyStepper::counterclockwise() { setRotation(false); }
-void MyStepper::reverse() { setRotation(!clockwiseRotation);  }
+void MyStepper::reverse() { setRotation(!clockwiseRotation); }
 
 void MyStepper::step() {
     gpio_set_level(STEP, 1);
@@ -24,25 +25,25 @@ void MyStepper::step() {
     // ets_delay_us(1); // tSL = tCLK + 20 = 104nS << 1uS
 }
 
-const int motorSteps = 200;                                                  // 200 steps/revolution
-const int motorMicroSteps = 8;                                               // 8 microsteps/step (MS[01] straps)
-const int motorRPM = 120;                                                    // current motor speed
-const int motorStepVelocity = motorRPM * motorSteps * motorMicroSteps / 60;  // current microsteps/sec, not to exceed fCLK/512 = 23400
+const int motorSteps = 200; // 200 steps/revolution
+const int motorMicroSteps = 8; // 8 microsteps/step (MS[01] straps)
+const int motorRPM = 120; // current motor speed
+const int motorStepVelocity = motorRPM * motorSteps * motorMicroSteps / 60; // current microsteps/sec, not to exceed fCLK/512 = 23400
 
 void MyStepper::demo() {
     // Demo loop: 5 revolutions, stop, reverse, repeat
     clockwise();
     while (true) {
         vTaskDelay(1000 / portTICK_PERIOD_MS);
-        for (int i = 0; i < 5 * motorSteps * motorMicroSteps; i++) {
+        for (int i = 0; i < 5 * motorSteps * motorMicroSteps; ++i) {
             step();
-            ets_delay_us(1000000 / motorStepVelocity);  // uS between (evenly spaced) processor step pulses
+            ets_delay_us(1000000 / motorStepVelocity); // uS between (evenly spaced) processor step pulses
         }
         reverse();
     }
 }
 
-MyStepper::MyStepper(gpio_num_t e, gpio_num_t d, gpio_num_t s) {
+MyStepper::MyStepper(const gpio_num_t e, const gpio_num_t d, const gpio_num_t s) {
     EN = e;
     DIR = d;
     STEP = s;
@@ -56,7 +57,7 @@ MyStepper::MyStepper(gpio_num_t e, gpio_num_t d, gpio_num_t s) {
         .mode = GPIO_MODE_OUTPUT,
         .pull_up_en = GPIO_PULLUP_DISABLE,
         .pull_down_en = GPIO_PULLDOWN_DISABLE,
-        .intr_type = GPIO_INTR_DISABLE};        
+        .intr_type = GPIO_INTR_DISABLE};
     gpio_config(&g);
 
     gpio_set_level(STEP, 0);

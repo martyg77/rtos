@@ -13,21 +13,21 @@ typedef struct {
     bool state;
 } buttonProcess_t;
 
-static void buttonTimerHandler(TaskHandle_t* t) {
-    BaseType_t pxHigherPriorityTaskWoken = pdFALSE;  // Not sure what this does
+static void buttonTimerHandler(TaskHandle_t *t) {
+    BaseType_t pxHigherPriorityTaskWoken = pdFALSE; // Not sure what this does
     vTaskNotifyGiveFromISR(*t, &pxHigherPriorityTaskWoken);
-    portYIELD_FROM_ISR();  // Not sure what this does
+    portYIELD_FROM_ISR(); // Not sure what this does
 }
 
 void buttonTimerCallBack(TimerHandle_t x) {
-    TaskHandle_t* t = (TaskHandle_t*)pvTimerGetTimerID(x);
+    TaskHandle_t *t = (TaskHandle_t *)pvTimerGetTimerID(x);
     xTaskNotifyGive(*t);
 }
 
-void buttonProcess(buttonProcess_t* tcb) {
+void buttonProcess(buttonProcess_t *tcb) {
     // My KY-040 module has 3 pullups
     // Switch signal is active low
-    gpio_pad_select_gpio(tcb->pin);  // PinMux magic
+    gpio_pad_select_gpio(tcb->pin);
     gpio_config_t g = {
         .pin_bit_mask = (1ull << tcb->pin),
         .mode = GPIO_MODE_INPUT,
@@ -52,23 +52,23 @@ void buttonProcess(buttonProcess_t* tcb) {
         } while (xTimerIsTimerActive(timer));
 
         tcb->state = !gpio_get_level(tcb->pin);
-    //  printf("(%i) Button %i\n", xTaskGetTickCount(), tcb->state);
+        //  printf("(%i) Button %i\n", xTaskGetTickCount(), tcb->state);
     }
 
     // We should never reach this point
     xTimerDelete(timer, 0);
-    vTaskDelete(NULL);
+    vTaskDelete(nullptr);
 }
 
-bool Button::pressed() { return ((buttonProcess_t*) tcb)->state; }
+bool Button::pressed() { return ((buttonProcess_t *)tcb)->state; }
 
-Button::Button(gpio_num_t p) {
+Button::Button(const gpio_num_t p) {
     pin = p;
-    tcb = new(buttonProcess_t) { pin, 0 };
+    tcb = new (buttonProcess_t){pin, 0};
     xTaskCreate((TaskFunction_t)buttonProcess, "button", configMINIMAL_STACK_SIZE * 4, tcb, 0, &task);
 }
 
 Button::~Button() {
-    delete((buttonProcess_t*)tcb);
+    delete ((buttonProcess_t *)tcb);
     vTaskDelete(task);
 }

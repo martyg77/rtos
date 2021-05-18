@@ -1,9 +1,10 @@
-#include <stdio.h>
-#include <freertos/FreeRTOS.h>
-#include <freertos/task.h>
-#include <freertos/queue.h>
-#include <driver/gpio.h>
 #include "Encoder.h"
+
+#include <driver/gpio.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/queue.h>
+#include <freertos/task.h>
+#include <stdio.h>
 
 typedef struct {
     gpio_num_t pinA;
@@ -13,12 +14,12 @@ typedef struct {
     int16_t deltaPrev;
 } encoderProcess_t;
 
-void encoderGpioHandler(encoderProcess_t* tcb) {
+void encoderGpioHandler(encoderProcess_t *tcb) {
     uint8_t ab = (gpio_get_level(tcb->pinA) << 1) | gpio_get_level(tcb->pinB);
-    xQueueSendFromISR(tcb->queue, &ab, NULL);
+    xQueueSendFromISR(tcb->queue, &ab, nullptr);
 }
 
-void encoderProcess(encoderProcess_t* tcb) {
+void encoderProcess(encoderProcess_t *tcb) {
     // My KY-040 module has 3 pullups
     gpio_pad_select_gpio(tcb->pinA); // PinMux magic
     gpio_pad_select_gpio(tcb->pinB); // PinMux magic
@@ -27,7 +28,7 @@ void encoderProcess(encoderProcess_t* tcb) {
         .mode = GPIO_MODE_INPUT,
         .pull_up_en = GPIO_PULLUP_DISABLE,
         .pull_down_en = GPIO_PULLDOWN_DISABLE,
-        .intr_type = GPIO_INTR_NEGEDGE};        
+        .intr_type = GPIO_INTR_NEGEDGE};
     gpio_config(&g);
 
     tcb->queue = xQueueCreate(16, sizeof(uint8_t));
@@ -41,32 +42,32 @@ void encoderProcess(encoderProcess_t* tcb) {
         state = ((state << 2) | (ab & 0x3)) & 0xf;
         static const int8_t quadratureTable[16] = {0, -1, 1, 0, 1, 0, 0, -1, -1, 0, 0, 1, 0, 1, -1, 0};
         tcb->value += quadratureTable[state];
-    //  printf("(%i) Encoder %x %x %i\n", xTaskGetTickCount(), ab, state, tcb->value);
+        //  printf("(%i) Encoder %x %x %i\n", xTaskGetTickCount(), ab, state, tcb->value);
     }
 
     // We should never reach this point
     vQueueDelete(tcb->queue);
-    vTaskDelete(NULL);
+    vTaskDelete(nullptr);
 }
 
-int Encoder::value() { return ((encoderProcess_t*)tcb)->value; };
+int Encoder::value() { return ((encoderProcess_t *)tcb)->value; };
 
 int Encoder::delta() {
-    encoderProcess_t* p = (encoderProcess_t*) tcb;
+    encoderProcess_t *p = (encoderProcess_t *)tcb;
     int d = p->value - p->deltaPrev;
     p->deltaPrev = p->value;
     return d;
 };
 
-Encoder::Encoder(gpio_num_t pinCLK, gpio_num_t pinDT) {
+Encoder::Encoder(const gpio_num_t pinCLK, const gpio_num_t pinDT) {
     // These two signals are interchangable
-    pinA = pinCLK; 
+    pinA = pinCLK;
     pinB = pinDT;
-    tcb = new(encoderProcess_t) { pinA, pinB, NULL, 0, 0 };
+    tcb = new (encoderProcess_t){pinA, pinB, nullptr, 0, 0};
     xTaskCreate((TaskFunction_t)encoderProcess, "encoder", configMINIMAL_STACK_SIZE * 4, tcb, 0, &task);
 }
 
 Encoder::~Encoder() {
-    delete((encoderProcess_t*)tcb);
+    delete ((encoderProcess_t *)tcb);
     vTaskDelete(task);
 }

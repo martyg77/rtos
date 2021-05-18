@@ -1,25 +1,26 @@
+#include "GUI.h"
+
+#include "Button.h"
+#include "Encoder.h"
+#include "ILI9341.h"
+#include "SSD1306.h"
+
+#include <esp_freertos_hooks.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+#include <lv_examples/src/lv_demo_keypad_encoder/lv_demo_keypad_encoder.h>
+#include <lv_examples/src/lv_demo_widgets/lv_demo_widgets.h>
+#include <lvgl.h>
+#include <lvgl_helpers.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "esp_freertos_hooks.h" // TODO order sensitive
-
-#include "lvgl.h"
-#include "lvgl_helpers.h"
-#include "lv_examples/src/lv_demo_widgets/lv_demo_widgets.h"
-#include "lv_examples/src/lv_demo_keypad_encoder/lv_demo_keypad_encoder.h"
-
-#include "GUI.h"
-#include "SSD1306.h"
-#include "ILI9341.h"
-
 // LVGL internal handles
-Encoder *encoder = NULL;
-Button *button = NULL;
-lv_indev_t* ky040_device = NULL; // TODO hacked global for lv_demo_keypad_encoder
+Encoder *encoder = nullptr;
+Button *button = nullptr;
+lv_indev_t *ky040_device = nullptr; // TODO hacked global for lv_demo_keypad_encoder
 
 // Encoder and button input, feedback to screen
 // Real-time data output
@@ -28,24 +29,24 @@ lv_indev_t* ky040_device = NULL; // TODO hacked global for lv_demo_keypad_encode
 // GUI is all-knowing application-aware, should be topmost on include tree, coupled to application class
 
 // Update values on screen by updating these objects from the GUI task timeslice
-lv_obj_t *accelX = NULL;
-lv_obj_t *accelY = NULL;
-lv_obj_t *accelZ = NULL;
-lv_obj_t *gyroX = NULL;
-lv_obj_t *gyroY = NULL;
-lv_obj_t *gyroZ = NULL;
+lv_obj_t *accelX = nullptr;
+lv_obj_t *accelY = nullptr;
+lv_obj_t *accelZ = nullptr;
+lv_obj_t *gyroX = nullptr;
+lv_obj_t *gyroY = nullptr;
+lv_obj_t *gyroZ = nullptr;
 
-bool guiEncoderRead(lv_indev_drv_t* p, lv_indev_data_t* d) {
-//  d->point = {0, 0};
-//  d->key = 0;
-//  d->btn_id = 0;
+bool guiEncoderRead(lv_indev_drv_t *p, lv_indev_data_t *d) {
+    //  d->point = {0, 0};
+    //  d->key = 0;
+    //  d->btn_id = 0;
     d->enc_diff = encoder->delta();
     d->state = (button->pressed()) ? LV_INDEV_STATE_PR : LV_INDEV_STATE_REL;
     return false; // No buffering support
 }
 
-static void guiEncoderEvent(lv_obj_t * obj, lv_event_t event) {
-    printf("[0x%08x] ", (uint32_t) obj);
+static void guiEncoderEventCallBack(lv_obj_t *obj, lv_event_t event) {
+    printf("[0x%08x] ", (uint32_t)obj);
     switch (event) {
     case LV_EVENT_PRESSED:
         printf("Pressed\n");
@@ -73,61 +74,61 @@ static void guiEncoderEvent(lv_obj_t * obj, lv_event_t event) {
 }
 
 void statusScreen() {
-    lv_obj_t *scr = lv_obj_create(NULL, NULL);
+    lv_obj_t *scr = lv_obj_create(nullptr, nullptr);
     lv_scr_load(scr);
-   
-    lv_obj_t *obj = lv_obj_create(scr, NULL);
+
+    lv_obj_t *obj = lv_obj_create(scr, nullptr);
     lv_obj_set_pos(obj, 0, 0);
     lv_obj_set_size(obj, 128, 16);
-    lv_obj_t *banner = lv_label_create(obj, NULL);
+    lv_obj_t *banner = lv_label_create(obj, nullptr);
     lv_label_set_long_mode(banner, LV_LABEL_LONG_SROLL_CIRC);
     lv_obj_set_width(banner, 128);
     lv_label_set_anim_speed(banner, 10); // pixels/sec
     lv_label_set_text(banner, "The quick brown fox jumped over the lazy dog");
     lv_obj_align(banner, obj, LV_ALIGN_CENTER, 0, 0);
 
-    lv_obj_t *body = lv_obj_create(scr, NULL);
+    lv_obj_t *body = lv_obj_create(scr, nullptr);
     lv_obj_set_pos(body, 0, 16);
     lv_obj_set_size(body, 128, 48);
 
-    obj = lv_obj_create(body, NULL);
+    obj = lv_obj_create(body, nullptr);
     lv_obj_set_size(obj, 42, 24);
     lv_obj_align(obj, body, LV_ALIGN_IN_TOP_LEFT, 0, 0);
-    accelX = lv_label_create(obj, NULL);
+    accelX = lv_label_create(obj, nullptr);
     lv_obj_align(accelX, obj, LV_ALIGN_CENTER, 0, 0);
     lv_label_set_align(accelX, LV_LABEL_ALIGN_RIGHT); // TODO this does not work
-    lv_obj_set_event_cb(accelX, guiEncoderEvent);
+    lv_obj_set_event_cb(accelX, guiEncoderEventCallBack);
 
     obj = lv_obj_create(body, obj);
     lv_obj_align(obj, body, LV_ALIGN_IN_TOP_MID, 0, 0);
-    accelY = lv_label_create(obj, NULL);
+    accelY = lv_label_create(obj, nullptr);
     lv_obj_align(accelY, obj, LV_ALIGN_CENTER, 0, 0);
-    lv_obj_set_event_cb(accelY, guiEncoderEvent);
+    lv_obj_set_event_cb(accelY, guiEncoderEventCallBack);
 
     obj = lv_obj_create(body, obj);
     lv_obj_align(obj, body, LV_ALIGN_IN_TOP_RIGHT, 0, 0);
-    accelZ = lv_label_create(obj, NULL);
+    accelZ = lv_label_create(obj, nullptr);
     lv_obj_align(accelZ, obj, LV_ALIGN_CENTER, 0, 0);
-    lv_obj_set_event_cb(accelZ, guiEncoderEvent);
-    
+    lv_obj_set_event_cb(accelZ, guiEncoderEventCallBack);
+
     obj = lv_obj_create(body, obj);
     lv_obj_align(obj, body, LV_ALIGN_IN_BOTTOM_LEFT, 0, 0);
-    gyroX = lv_label_create(obj, NULL);
+    gyroX = lv_label_create(obj, nullptr);
     lv_obj_align(gyroX, obj, LV_ALIGN_CENTER, 0, 0);
-    lv_obj_set_event_cb(gyroX, guiEncoderEvent);
-   
+    lv_obj_set_event_cb(gyroX, guiEncoderEventCallBack);
+
     obj = lv_obj_create(body, obj);
     lv_obj_align(obj, body, LV_ALIGN_IN_BOTTOM_MID, 0, 0);
-    gyroY = lv_label_create(obj, NULL);
+    gyroY = lv_label_create(obj, nullptr);
     lv_obj_align(gyroY, obj, LV_ALIGN_CENTER, 0, 0);
-    lv_obj_set_event_cb(gyroY, guiEncoderEvent);
+    lv_obj_set_event_cb(gyroY, guiEncoderEventCallBack);
 
     obj = lv_obj_create(body, obj);
     lv_obj_align(obj, body, LV_ALIGN_IN_BOTTOM_RIGHT, 0, 0);
-    gyroZ = lv_label_create(obj, NULL);
+    gyroZ = lv_label_create(obj, nullptr);
     lv_obj_align(gyroZ, obj, LV_ALIGN_CENTER, 0, 0);
-    lv_obj_set_event_cb(gyroZ, guiEncoderEvent);
-   
+    lv_obj_set_event_cb(gyroZ, guiEncoderEventCallBack);
+
     // Event group coupled to encoder callback
     lv_group_t *g = lv_group_create();
     lv_group_add_obj(g, accelX);
@@ -157,8 +158,8 @@ bool timerCallBack(void) {
 // GUI Task
 // Could be the same as main task, but need to control affinity, priority, etc.
 
-void guiProcess(void* p) {
-//  ILI9341 lcd(); // RESET 18 SCL 19 DC 21 CS 22 SDA 23 SDO 25 Backlight 5
+void guiProcess(void *p) {
+    //  ILI9341 lcd(); // RESET 18 SCL 19 DC 21 CS 22 SDA 23 SDO 25 Backlight 5
     SSD1306 oled(GPIO_NUM_21, GPIO_NUM_22);
 
     // Rotary encoder for input
@@ -168,7 +169,7 @@ void guiProcess(void* p) {
     lv_indev_drv_init(&encoder);
     encoder.type = LV_INDEV_TYPE_ENCODER;
     encoder.read_cb = guiEncoderRead;
-    encoder.feedback_cb = NULL;
+    encoder.feedback_cb = nullptr;
     ky040_device = lv_indev_drv_register(&encoder);
 
     // Screen layout
@@ -181,5 +182,5 @@ void guiProcess(void* p) {
     while (true) { vTaskDelay(lv_task_handler() / portTICK_PERIOD_MS); }
 
     // We should never reach this point
-    vTaskDelete(NULL);
+    vTaskDelete(nullptr);
 }

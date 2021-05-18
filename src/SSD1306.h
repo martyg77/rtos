@@ -7,16 +7,19 @@
 // For simplicity, implementation is hard-wired to 128x64 i2c ssd1306 display
 // This is a monochrome device; top 16 pixel rows have yellow phosphor, remaining 48 are blue
 
+#ifndef SSD1306_H
+#define SSD1306_H
+
 #include <driver/gpio.h>
 #include <driver/i2c.h>
-#include "lvgl.h"
+#include <lvgl.h>
 
 class SSD1306 {
-public:
-    SSD1306(gpio_num_t sda, gpio_num_t scl);
+  public:
+    SSD1306(const gpio_num_t sda, const gpio_num_t scl);
     ~SSD1306();
-    
-private:
+
+  private:
     gpio_num_t sda = GPIO_NUM_NC;
     gpio_num_t scl = GPIO_NUM_NC;
 
@@ -29,13 +32,15 @@ private:
 
     lv_disp_drv_t display;
     lv_disp_buf_t buffer;
-    uint8_t *displayBuffer = NULL;
+    uint8_t *displayBuffer = nullptr;
 
-    static void i2cDispatch(uint8_t prefix, uint8_t *msg, int len);
-    
+    static void i2cDispatch(const uint8_t prefix, uint8_t *msg, const uint len);
+
     // LVGL driver callbacks
     static void flush_cb(lv_disp_drv_t *drv, const lv_area_t *area, lv_color_t *color_map);
     static void rounder_cb(lv_disp_drv_t *drv, lv_area_t *area);
     static void set_px_cb(lv_disp_drv_t *drv, uint8_t *buf, lv_coord_t buf_w, lv_coord_t x, lv_coord_t y,
                           lv_color_t color, lv_opa_t opa);
 };
+
+#endif // SSD1306_H

@@ -1,15 +1,17 @@
-#include "assert.h"
-#include "driver/i2c.h"
 #include "ILI9341.h"
-#include "lvgl_tft/ili9341.h"
-#include "lv_themes/lv_theme.h"
-#include "lv_themes/lv_theme_mono.h"
-#include "lv_font/lv_font.h"
+
+#include <assert.h>
+#include <driver/i2c.h>
+#include <lv_font/lv_font.h>
+#include <lv_themes/lv_theme.h>
+#include <lv_themes/lv_theme_mono.h>
+#include <lvgl_helpers.h>
+#include <lvgl_tft/ili9341.h>
 
 ILI9341::ILI9341() {
     // Allocate DMA-capable memory for display double-buffering
-    buf1 = (lv_color_t *) heap_caps_malloc(DISP_BUF_SIZE * sizeof(lv_color_t), MALLOC_CAP_DMA);
-    buf2 = (lv_color_t *) heap_caps_malloc(DISP_BUF_SIZE * sizeof(lv_color_t), MALLOC_CAP_DMA);
+    buf1 = (lv_color_t *)heap_caps_malloc(DISP_BUF_SIZE * sizeof(lv_color_t), MALLOC_CAP_DMA);
+    buf2 = (lv_color_t *)heap_caps_malloc(DISP_BUF_SIZE * sizeof(lv_color_t), MALLOC_CAP_DMA);
 
     // Initialize LVGL susbsystem
     lv_disp_buf_t buffer;

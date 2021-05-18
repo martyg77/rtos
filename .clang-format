@@ -1,0 +1,20 @@
+﻿---
+
+BasedOnStyle: LLVM
+
+IndentWidth: '4'
+ColumnLimit: 0
+ReflowComments: 'false'
+AlignTrailingComments: 'false'
+
+IncludeBlocks: Regroup
+SortIncludes: 'true'
+
+AllowShortBlocksOnASingleLine: 'true'
+AllowShortCaseLabelsOnASingleLine: 'true'
+AllowShortFunctionsOnASingleLine: All
+AllowShortIfStatementsOnASingleLine: Always
+AllowShortLambdasOnASingleLine: All
+AllowShortLoopsOnASingleLine: 'true'
+
+...
