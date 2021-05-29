@@ -1,7 +1,6 @@
 // AsLong JGB37-520B-333RPM DC motor, geared 30:1
 // Toshiba TB6612FNG motor controller
 
-// LED (really general purpose) PWM (LEDC) controller
 // PWM duty cycle controls motor speed using ESP32 LEDC controller
 
 #pragma once
@@ -29,6 +28,5 @@ class Motor {
     ledc_timer_t pwm_timer = LEDC_TIMER_MAX;
     ledc_channel_t pwm_channel = LEDC_CHANNEL_MAX;
 
-    ledc_timer_config_t ledc_timer;
     ledc_channel_config_t ledc_channel;
 };

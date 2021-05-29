@@ -24,7 +24,7 @@ class SSD1306 {
     gpio_num_t scl = GPIO_NUM_NC;
 
     // TODO several of these should be constructor arguments
-    static const i2c_port_t port = 0;
+    static const i2c_port_t port = I2C_NUM_0;
     static const int i2cAddress = 0x3c;
     static const int width = 128; // pixels
     static const int height = 64; // pixels

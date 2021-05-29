@@ -10,7 +10,17 @@ Motor::Motor(const gpio_num_t in1, const gpio_num_t in2, const gpio_num_t pwm,
     pwm_timer = timer;
     pwm_channel = channel;
 
-    ledc_timer = {
+    gpio_pad_select_gpio(gpio_IN1);
+    gpio_pad_select_gpio(gpio_IN2);
+    gpio_config_t g = {
+        .pin_bit_mask = (1ull << gpio_IN1) | (1ull << gpio_IN2),
+        .mode = GPIO_MODE_OUTPUT,
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_DISABLE};
+    gpio_config(&g);
+
+    ledc_timer_config_t ledc_timer = {
         .speed_mode = LEDC_LOW_SPEED_MODE, // TODO does high-speed mode buy me anything?
         {.duty_resolution = LEDC_TIMER_13_BIT}, // TODO PWM resolution +/- 256 preferred
         .timer_num = pwm_timer,
