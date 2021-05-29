@@ -1,12 +1,8 @@
-// AsLong JGB37-520B-333RPM
-
-// Toshiba TB6612FNG 
-// fPWM 100kHz
-// TODO add brake functions - do they buy me anything?
+// AsLong JGB37-520B-333RPM DC motor, geared 30:1
+// Toshiba TB6612FNG motor controller
 
 // LED (really general purpose) PWM (LEDC) controller
-// PWM duty cycle controls motor speed
-// Motor supports forward/reverse, specified using signed duty cycle
+// PWM duty cycle controls motor speed using ESP32 LEDC controller
 
 #pragma once
 
@@ -19,8 +15,9 @@ class Motor {
             const ledc_timer_t timer, const ledc_channel_t channel);
 
     // TODO duty cycle type is really +/- 255, not int
-    // TODO express motor PWM as float 0 <= x <= 1uty cycle
-    const uint duty_cycle_range = 255; // Maximum value for PWM d
+    // TODO express motor PWM as float 0.0 <= x <= 1.0
+    // Motor supports forward/reverse, specified using signed duty cycle
+    const uint duty_cycle_range = 255; // Maximum absolute value for PWM duty_cycle
     void run(const int duty_cycle); // negative == reverse
     void stop();
 
