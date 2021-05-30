@@ -1,6 +1,7 @@
 #include "Segway.h"
 
 // Rotary shaft encoder interrupt handlers
+// TODO this comment block belongs elswhere
 
 // Hall-effect encoder magnet has 13 poles, gear reduction to wheel axle is 30:1
 // Therefore both encoder pinA and pinB each provide 13*30=390 pulses/axle revolution
@@ -13,7 +14,7 @@
 // Encoder signals are notorious for noise: this may significantly impact calculations
 // Differential mode provides redundancy, which can be leveraged for noise reduction
 
-// TODO Arduino artifacts
+// TODO Arduino artifacts, where is esp-idf/freertos equivalent
 #define constrain(amt,low,high) ((amt)<(low)?(low):((amt)>(high)?(high):(amt)))
 
 // Tilt (vertical balancing) angle PID
@@ -125,6 +126,7 @@ void Segway::setPWM() {
 
     // Raw motor PWM is superposition of our 3 stimuli; probably have embedded coefficients
     // (oem) speed and turn are interference for tilt term
+    // TODO what are the measurement units PID function outputs - ultimately i am summing to a PWM value - dimensionless?
     leftMotorPWM = -tiltPIDOutput - speedPIDOutput - turnPIDOutput; // TODO convert float -> int
     rightMotorPWM = -tiltPIDOutput - speedPIDOutput + turnPIDOutput;
     leftMotorPWM = constrain(leftMotorPWM, -255, 255);

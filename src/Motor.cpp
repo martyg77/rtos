@@ -22,7 +22,7 @@ Motor::Motor(const gpio_num_t in1, const gpio_num_t in2, const gpio_num_t pwm,
 
     ledc_timer_config_t ledc_timer = {
         .speed_mode = LEDC_LOW_SPEED_MODE, // TODO does high-speed mode buy me anything?
-        {.duty_resolution = LEDC_TIMER_13_BIT}, // TODO PWM resolution +/- 256 preferred
+        {.duty_resolution = LEDC_TIMER_8_BIT}, // TODO PWM resolution +/- 256 preferred
         .timer_num = pwm_timer,
         .freq_hz = 5000, // TODO controller max 100kHz
         .clk_cfg = LEDC_AUTO_CLK,
@@ -59,6 +59,9 @@ void Motor::run(const int duty_cycle) {
 }
 
 void Motor::stop() {
+    ledc_set_duty(ledc_channel.speed_mode, ledc_channel.channel, 0);
+    ledc_update_duty(ledc_channel.speed_mode, ledc_channel.channel);
+    
     gpio_set_level(gpio_IN1, 0);
     gpio_set_level(gpio_IN2, 0);
 }

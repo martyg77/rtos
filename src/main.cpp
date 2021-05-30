@@ -11,9 +11,9 @@ const gpio_num_t GPIO_LED_RED = GPIO_NUM_0;
 const gpio_num_t GPIO_LED_GREEN = GPIO_NUM_2;
 const gpio_num_t GPIO_LED_BLUE = GPIO_NUM_4;
 
-Flasher red(GPIO_LED_RED, 250);
+// Flasher red(GPIO_LED_RED, 250);
 Flasher green(GPIO_LED_GREEN, 300);
-Flasher blue(GPIO_LED_BLUE, 500);
+// Flasher blue(GPIO_LED_BLUE, 500);
 
 Encoder left_encoder(GPIO_NUM_26, GPIO_NUM_25);
 Encoder right_encoder(GPIO_NUM_17, GPIO_NUM_16);
@@ -36,7 +36,7 @@ const int clock_frequency = TIMER_BASE_CLK / clock_prescaler; // Base clock APB 
 const uint64_t timer5mS_preset = clock_frequency * Segway::handlerIntervalmS / 1000;
 
 bool timer5mS_callback(void *p) { 
-    robot.handler5mS();
+//  robot.handler5mS();
     return false; 
 }
 
@@ -56,10 +56,10 @@ void timer_setup() {
     timer_start(group, timer);
 }
 
-// Motor controller STBY pin enable; software always enables
+// Motor controller STBY pin; software always enables
 // TODO STBY probably should be strapped in hardware
 
-const gpio_num_t gpio_stby = GPIO_NUM_12; // TODO hack
+const gpio_num_t gpio_stby = GPIO_NUM_12;
 
 void setup_stby_gpio() {
     gpio_pad_select_gpio(gpio_stby);
@@ -109,4 +109,20 @@ void app_main() {
     i2c_setup();
     mpu.initialize(); // TODO Where does MPU6050 calibration take place?
     timer_setup();
+
+    while (true) {
+        left_motor.run(50);
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        left_motor.run(-50);
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        left_motor.stop();
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+
+        right_motor.run(50);
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        right_motor.run(-50);
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        right_motor.stop();
+        vTaskDelay(3000 / portTICK_PERIOD_MS);
+    }
 }

@@ -21,7 +21,6 @@
 // TODO review methods/members for const arguments
 // TODO some are float, some are double -- why?
 // TODO make sure floating point operations are kept to a minimum, really expensive on UNO
-// TODO what are the measurement units PID function outputs - ultimately i am summing to a PWM value - dimensionless?
 // TODO carefully think through fail-safe modes, especially for software errors and runaway conditions
 // TODO single LED that shows balancing software in or out of sync
 // TODO emergency stop button, a power switch would be better
@@ -63,7 +62,7 @@ class Segway {
     // Inertial measurement apparatus yields current angular position in 3 dimensions
     pidCoefficients tiltPIDGains = tiltPIDDefaults;
     int16_t accelX, accelY, accelZ, gyroX, gyroY, gyroZ; // Latest raw input from MPU6050
-    // TODO clean up KalmanFilter library
+    // TODO clean up KalmanFilter library, source from generic math library
     double tiltPIDOutput = 0;
 
     // Turn (angular/turn/spin) velocity PID function, output updated every 20mS
