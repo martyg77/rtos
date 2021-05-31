@@ -87,8 +87,9 @@ const int clock_frequency = TIMER_BASE_CLK / clock_prescaler; // Base clock APB 
 const uint64_t timer5mS_preset = clock_frequency * Segway::handlerIntervalmS / 1000;
 
 bool timer5mS_callback(void *p) {
-    robot.handler5mS();
-    return false; 
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE; // TODO not sure what this does
+    xEventGroupSetBitsFromISR(robot.event, 1, &xHigherPriorityTaskWoken);
+    return false; // TODO true to force reschedule?
 }
 
 void timer_setup() {
@@ -117,9 +118,13 @@ void app_main() {
 
     while (true) {
         vTaskDelay(1000 / portTICK_PERIOD_MS);
+        /*
         int16_t ax, ay, az, gx, gy, gz;
         mpu.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
         printf("%i %i %i %i %i %i\n", ax, ay, az, gx, gy, gz);
+        */
+        printf("%i %i %i %i %i %i %f\n", 
+            robot.accelX, robot.accelY, robot.accelZ, robot.gyroX, robot.gyroY, robot.gyroZ, robot.kalmanfilter.angle);
     }
 
     while (true) {

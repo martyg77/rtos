@@ -1,5 +1,7 @@
 #include "Segway.h"
 
+#include <driver/timer.h>
+
 // Rotary shaft encoder interrupt handlers
 // TODO this comment block belongs elswhere
 
@@ -141,19 +143,23 @@ void Segway::setPWM() {
     right_motor->run(rightMotorPWM);
 }
 
-// Main interrupt handler body
-// This procedure to be called every 5mS
+// Task mainline
 
-const int every20mS = 20 / Segway::handlerIntervalmS; // Used to schedule turn PID
-const int every50mS = 50 / Segway::handlerIntervalmS; // Used to schedule speed PID
-static int tick = 0;
+void segwayProcess(Segway *robot) {
+    const int every20mS = 20 / robot->handlerIntervalmS; // Used to schedule turn PID
+    const int every50mS = 50 / robot->handlerIntervalmS; // Used to schedule speed PID
 
-void Segway::handler5mS() {
-    tick = (tick + 1) % (every20mS * every50mS); // Prevent integer overflow
-    tiltPID();
-//  if (tick % every20mS) turnPID();
-//  if (tick % every50mS) speedPID();
-    setPWM();
+    while (true) {
+        robot->tick = (robot->tick + 1) % (every20mS * every50mS); // Prevent integer overflow
+        
+        // Event group bit set by timer interrupt every 5mS 
+        xEventGroupWaitBits(robot->event, 1, pdTRUE, pdFALSE, portMAX_DELAY);
+
+        robot->tiltPID();
+        //  if (tick % every20mS) turnPID();
+        //  if (tick % every50mS) speedPID();
+        robot->setPWM();
+    }
 }
 
 // Instrumentation methods for Bluetooth console
@@ -184,4 +190,7 @@ Segway::Segway(Motor *lm,  Motor *rm, Encoder *le, Encoder *re, MPU6050 *m) {
 
     stop();
     resetPidCoefficients();
+
+    event = xEventGroupCreate();
+    xTaskCreate((TaskFunction_t)segwayProcess, "segway", configMINIMAL_STACK_SIZE * 4, this, 5, &task);
 }

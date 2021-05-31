@@ -17,6 +17,7 @@
 #include "Motor.h"
 
 #include <MPU6050.h>
+#include <freertos/event_groups.h>
 
 // TODO review methods/members for const arguments
 // TODO some are float, some are double -- why?
@@ -32,9 +33,11 @@ class Segway {
             Encoder *left_encoder, Encoder *right_encoder,
             MPU6050 *mpu);
 
-    // Timebase for all our digital filters, must be called every 5mS
+    // Timebase for all our digital filters, event to be raised every 5mS
+    // TODO these definitions should be private
     static const int handlerIntervalmS = 5; // milliSeconds
-    void handler5mS();
+    EventGroupHandle_t event = nullptr;
+    int tick = 0;
 
     // Robot movement is controlled by directly setting these signed registers
     int tiltSetPoint = 0; // (angular position about X-axis) This is the "balance" part; leave at zero
@@ -62,6 +65,7 @@ class Segway {
     // Inertial measurement apparatus yields current angular position in 3 dimensions
     pidCoefficients tiltPIDGains = tiltPIDDefaults;
     int16_t accelX, accelY, accelZ, gyroX, gyroY, gyroZ; // Latest raw input from MPU6050
+    KalmanFilter kalmanfilter;
     // TODO clean up KalmanFilter library, source from generic math library
     double tiltPIDOutput = 0;
 
@@ -81,17 +85,18 @@ class Segway {
     double leftMotorPWM = 0;
     double rightMotorPWM = 0;
 
-  private:
     double tiltPID();
     float turnPID();
     double speedPID();
     void setPWM();
 
+  private:
     Motor *left_motor = nullptr;
     Motor *right_motor = nullptr;
     Encoder *left_encoder = nullptr;
     Encoder *right_encoder = nullptr;
     MPU6050 *mpu = nullptr; 
 
-    KalmanFilter kalmanfilter;
+
+    TaskHandle_t task = nullptr;
 };
