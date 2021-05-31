@@ -13,10 +13,10 @@ typedef struct {
     bool state;
 } buttonProcess_t;
 
-static void buttonTimerHandler(TaskHandle_t *t) {
-    BaseType_t pxHigherPriorityTaskWoken = pdFALSE; // Not sure what this does
-    vTaskNotifyGiveFromISR(*t, &pxHigherPriorityTaskWoken);
-    portYIELD_FROM_ISR(); // Not sure what this does
+static void buttonTimerISR(TaskHandle_t *t) {
+    BaseType_t wake = pdFALSE;
+    vTaskNotifyGiveFromISR(*t, &wake);
+    if (wake == pdTRUE) portYIELD_FROM_ISR(); // Request context switch
 }
 
 void buttonTimerCallBack(TimerHandle_t x) {
@@ -37,7 +37,7 @@ void buttonProcess(buttonProcess_t *tcb) {
     gpio_config(&g);
 
     TaskHandle_t task = xTaskGetCurrentTaskHandle();
-    gpio_isr_handler_add(tcb->pin, (gpio_isr_t)buttonTimerHandler, &task);
+    gpio_isr_handler_add(tcb->pin, (gpio_isr_t)buttonTimerISR, &task);
     static const TickType_t debounceTicks = Button::debounce_mS / portTICK_PERIOD_MS;
     TimerHandle_t timer = xTimerCreate("button", debounceTicks, pdFALSE, &task, buttonTimerCallBack);
 

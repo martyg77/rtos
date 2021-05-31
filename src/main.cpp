@@ -86,9 +86,9 @@ const int clock_prescaler = 16;
 const int clock_frequency = TIMER_BASE_CLK / clock_prescaler; // Base clock APB 80MHz 
 const uint64_t timer5mS_preset = clock_frequency * Segway::handlerIntervalmS / 1000;
 
-bool timer5mS_callback(void *p) {
+bool timer5mS_ISR(void *p) {
     BaseType_t wake = pdFALSE;
-    xTaskNotifyFromISR(robot.task, 0, eSetBits, &wake);
+    vTaskNotifyGiveFromISR(robot.task, &wake);
     if (wake == pdTRUE) portYIELD_FROM_ISR(); // Request context switch
     return wake == pdTRUE;
 }
@@ -105,7 +105,7 @@ void timer_setup() {
     timer_init(group, timer, &config);
 
     timer_set_counter_value(group, timer, timer5mS_preset);
-    timer_isr_callback_add(group, timer, timer5mS_callback, nullptr, 0);
+    timer_isr_callback_add(group, timer, timer5mS_ISR, nullptr, 0);
     timer_start(group, timer);
 }
 
