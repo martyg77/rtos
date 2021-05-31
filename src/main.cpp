@@ -49,7 +49,7 @@ void i2c_setup() {
 class Init {
   public:
     Init() {
-        gpio_install_isr_service(0);
+        // ESP_ERROR_CHECK(gpio_install_isr_service(0));
         // lv_init();
         // setup_stby_gpio(); // TODO JTAG conflict
         i2c_setup();
@@ -64,10 +64,8 @@ const gpio_num_t GPIO_LED_BLUE = GPIO_NUM_4;
 Flasher green(GPIO_LED_GREEN, 300);
 // Flasher blue(GPIO_LED_BLUE, 500);
 
-/*
 Encoder right_encoder(GPIO_NUM_17, GPIO_NUM_16);
 Encoder left_encoder(GPIO_NUM_26, GPIO_NUM_25);
-*/
 
 //Motor left_motor(GPIO_NUM_14, GPIO_NUM_27, GPIO_NUM_13, LEDC_TIMER_0, LEDC_CHANNEL_0); // JTAG conflicts
   Motor left_motor(GPIO_NUM_33, GPIO_NUM_27, GPIO_NUM_32, LEDC_TIMER_0, LEDC_CHANNEL_0);
@@ -77,7 +75,7 @@ Motor right_motor(GPIO_NUM_18, GPIO_NUM_19, GPIO_NUM_5, LEDC_TIMER_1, LEDC_CHANN
 MPU6050 mpu;
 
 // So now I need to control the thing, but just getting it to stand straight is enough for now
-Segway robot(&left_motor, &right_motor, nullptr, nullptr, &mpu);
+Segway robot(&left_motor, &right_motor, &left_encoder, &right_encoder, &mpu);
 
 // 5mS timebase for Segway controller task
 
@@ -116,16 +114,12 @@ void timer_setup() {
 extern "C" { void app_main(); }
 
 void app_main() {
-    mpu.initialize(); // TODO Where does MPU6050 calibration take place?
+    ESP_ERROR_CHECK(gpio_install_isr_service(0)); // TODO this breaks if i try to initialize upstairs
+    mpu.initialize(); // TODO Where does MPU6050 _calibration_ take place?
     timer_setup();
 
     while (true) {
         vTaskDelay(1000 / portTICK_PERIOD_MS);
-        /*
-        int16_t ax, ay, az, gx, gy, gz;
-        mpu.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
-        printf("%i %i %i %i %i %i\n", ax, ay, az, gx, gy, gz);
-        */
         printf("%i %i %i %i %i %i %f\n", 
             robot.accelX, robot.accelY, robot.accelZ, robot.gyroX, robot.gyroY, robot.gyroZ, robot.kalmanfilter.angle);
     }

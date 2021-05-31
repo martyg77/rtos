@@ -14,7 +14,7 @@ typedef struct {
     int16_t deltaPrev;
 } encoderProcess_t;
 
-void encoderGpioHandler(encoderProcess_t *tcb) {
+IRAM_ATTR void encoderGpioHandler(encoderProcess_t *tcb) {
     uint8_t ab = (gpio_get_level(tcb->pinA) << 1) | gpio_get_level(tcb->pinB);
     xQueueSendFromISR(tcb->queue, &ab, nullptr);
 }
