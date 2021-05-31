@@ -147,18 +147,15 @@ void Segway::setPWM() {
 // Task mainline
 
 void segwayProcess(Segway *robot) {
-    const int every20mS = 20 / robot->handlerIntervalmS; // Used to schedule turn PID
-    const int every50mS = 50 / robot->handlerIntervalmS; // Used to schedule speed PID
-
     while (true) {
         
-        // Notificatio raised by timer interrupt every 5mS
+        // Notification raised by timer interrupt every 5mS
         uint32_t i;
         xTaskNotifyWait(ULONG_MAX, ULONG_MAX, &i, portMAX_DELAY);
 
-        // TODO Toggle GPIO 
-        // gpio_set_level(GPIO_NUM_12, robot->tick % 2);
-
+        // These methods oversee real-time motion control for the robot
+        const int every20mS = 20 / robot->handlerIntervalmS; // Used to schedule turn PID
+        const int every50mS = 50 / robot->handlerIntervalmS; // Used to schedule speed PID
         robot->tick = (robot->tick + 1) % (every20mS * every50mS); // Prevent integer overflow
         robot->tiltPID();
         //  if (tick % every20mS) turnPID();
