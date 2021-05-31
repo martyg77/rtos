@@ -5,12 +5,13 @@
 
 #include <driver/gpio.h>
 #include <driver/timer.h>
+#include <freertos/task.h>
 #include <MPU6050.h>
 
 // Motor controller STBY pin; software always enables
 // TODO STBY probably should be strapped in hardware
 
-const gpio_num_t gpio_stby = GPIO_NUM_12;
+const gpio_num_t gpio_stby = GPIO_NUM_12; // TODO JTAG conflict
 
 void setup_stby_gpio() {
     gpio_pad_select_gpio(gpio_stby);
@@ -49,9 +50,8 @@ class Init {
   public:
     Init() {
         gpio_install_isr_service(0);
-        vTaskDelay(50);
         // lv_init();
-        // setup_stby_gpio(); // JTAG conflict
+        // setup_stby_gpio(); // TODO JTAG conflict
         i2c_setup();
     }
 } init_me_first;
@@ -64,8 +64,10 @@ const gpio_num_t GPIO_LED_BLUE = GPIO_NUM_4;
 Flasher green(GPIO_LED_GREEN, 300);
 // Flasher blue(GPIO_LED_BLUE, 500);
 
-Encoder left_encoder(GPIO_NUM_26, GPIO_NUM_25);
+/*
 Encoder right_encoder(GPIO_NUM_17, GPIO_NUM_16);
+Encoder left_encoder(GPIO_NUM_26, GPIO_NUM_25);
+*/
 
 //Motor left_motor(GPIO_NUM_14, GPIO_NUM_27, GPIO_NUM_13, LEDC_TIMER_0, LEDC_CHANNEL_0); // JTAG conflicts
   Motor left_motor(GPIO_NUM_33, GPIO_NUM_27, GPIO_NUM_32, LEDC_TIMER_0, LEDC_CHANNEL_0);
@@ -75,9 +77,9 @@ Motor right_motor(GPIO_NUM_18, GPIO_NUM_19, GPIO_NUM_5, LEDC_TIMER_1, LEDC_CHANN
 MPU6050 mpu;
 
 // So now I need to control the thing, but just getting it to stand straight is enough for now
-Segway robot(&left_motor, &right_motor, &left_encoder, &right_encoder, &mpu);
+Segway robot(&left_motor, &right_motor, nullptr, nullptr, &mpu);
 
-// 5mS timebase
+// 5mS timebase for Segway controller task
 
 const timer_group_t group = TIMER_GROUP_0;
 const timer_idx_t timer = TIMER_0;
@@ -87,9 +89,10 @@ const int clock_frequency = TIMER_BASE_CLK / clock_prescaler; // Base clock APB 
 const uint64_t timer5mS_preset = clock_frequency * Segway::handlerIntervalmS / 1000;
 
 bool timer5mS_callback(void *p) {
-    BaseType_t xHigherPriorityTaskWoken = pdFALSE; // TODO not sure what this does
-    xEventGroupSetBitsFromISR(robot.event, 1, &xHigherPriorityTaskWoken);
-    return false; // TODO true to force reschedule?
+    BaseType_t wake = pdFALSE;
+    xTaskNotifyFromISR(robot.task, 0, eSetBits, &wake);
+    if (wake == pdTRUE) portYIELD_FROM_ISR(); // Request context switch
+    return wake == pdTRUE;
 }
 
 void timer_setup() {

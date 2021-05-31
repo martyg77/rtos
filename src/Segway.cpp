@@ -1,6 +1,7 @@
 #include "Segway.h"
 
 #include <driver/timer.h>
+#include <freertos/task.h>
 
 // Rotary shaft encoder interrupt handlers
 // TODO this comment block belongs elswhere
@@ -150,11 +151,15 @@ void segwayProcess(Segway *robot) {
     const int every50mS = 50 / robot->handlerIntervalmS; // Used to schedule speed PID
 
     while (true) {
-        robot->tick = (robot->tick + 1) % (every20mS * every50mS); // Prevent integer overflow
         
-        // Event group bit set by timer interrupt every 5mS 
-        xEventGroupWaitBits(robot->event, 1, pdTRUE, pdFALSE, portMAX_DELAY);
+        // Notificatio raised by timer interrupt every 5mS
+        uint32_t i;
+        xTaskNotifyWait(ULONG_MAX, ULONG_MAX, &i, portMAX_DELAY);
 
+        // TODO Toggle GPIO 
+        // gpio_set_level(GPIO_NUM_12, robot->tick % 2);
+
+        robot->tick = (robot->tick + 1) % (every20mS * every50mS); // Prevent integer overflow
         robot->tiltPID();
         //  if (tick % every20mS) turnPID();
         //  if (tick % every50mS) speedPID();
@@ -191,6 +196,5 @@ Segway::Segway(Motor *lm,  Motor *rm, Encoder *le, Encoder *re, MPU6050 *m) {
     stop();
     resetPidCoefficients();
 
-    event = xEventGroupCreate();
     xTaskCreate((TaskFunction_t)segwayProcess, "segway", configMINIMAL_STACK_SIZE * 4, this, 5, &task);
 }

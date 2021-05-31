@@ -17,7 +17,7 @@
 #include "Motor.h"
 
 #include <MPU6050.h>
-#include <freertos/event_groups.h>
+#include <freertos/task.h>
 
 // TODO review methods/members for const arguments
 // TODO some are float, some are double -- why?
@@ -36,7 +36,6 @@ class Segway {
     // Timebase for all our digital filters, event to be raised every 5mS
     // TODO these definitions should be private
     static const int handlerIntervalmS = 5; // milliSeconds
-    EventGroupHandle_t event = nullptr;
     int tick = 0;
 
     // Robot movement is controlled by directly setting these signed registers
@@ -85,6 +84,7 @@ class Segway {
     double leftMotorPWM = 0;
     double rightMotorPWM = 0;
 
+    TaskHandle_t task = nullptr;
     double tiltPID();
     float turnPID();
     double speedPID();
@@ -96,7 +96,4 @@ class Segway {
     Encoder *left_encoder = nullptr;
     Encoder *right_encoder = nullptr;
     MPU6050 *mpu = nullptr; 
-
-
-    TaskHandle_t task = nullptr;
 };
