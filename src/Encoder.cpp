@@ -20,15 +20,14 @@ void encoderGpioHandler(encoderProcess_t *tcb) {
 }
 
 void encoderProcess(encoderProcess_t *tcb) {
-    // My KY-040 module has 3 pullups
-    gpio_pad_select_gpio(tcb->pinA); // PinMux magic
-    gpio_pad_select_gpio(tcb->pinB); // PinMux magic
+    gpio_pad_select_gpio(tcb->pinA);
+    gpio_pad_select_gpio(tcb->pinB);
     gpio_config_t g = {
         .pin_bit_mask = (1ull << tcb->pinA) | (1ull << tcb->pinB),
         .mode = GPIO_MODE_INPUT,
         .pull_up_en = GPIO_PULLUP_DISABLE,
         .pull_down_en = GPIO_PULLDOWN_DISABLE,
-        .intr_type = GPIO_INTR_NEGEDGE};
+        .intr_type = GPIO_INTR_ANYEDGE};
     gpio_config(&g);
 
     tcb->queue = xQueueCreate(16, sizeof(uint8_t));
