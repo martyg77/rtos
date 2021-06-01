@@ -29,8 +29,8 @@ void setup_stby_gpio() {
 // I2C master port
 
 const i2c_port_t mpu_i2c_port = I2C_NUM_0;
-const gpio_num_t mpu_sda = GPIO_NUM_22;
-const gpio_num_t mpu_scl = GPIO_NUM_21;
+const gpio_num_t mpu_sda = GPIO_NUM_21;
+const gpio_num_t mpu_scl = GPIO_NUM_22;
 
 void i2c_setup() {
     i2c_config_t c = {
@@ -61,7 +61,7 @@ bool timer5mS_ISR(Segway *robot) {
     return wake == pdTRUE;
 }
 
-void timer_setup(Segway *robot) {
+void timer5mS_enable(Segway *robot) {
     timer_config_t config = {
         .alarm_en = TIMER_ALARM_EN,
         .counter_en = TIMER_PAUSE,
@@ -84,42 +84,54 @@ extern "C" { void app_main(); }
 void app_main() {
     gpio_install_isr_service(0);
     i2c_setup();
-    // setup_stby_gpio(); // TODO JTAG conflict
+    setup_stby_gpio(); // TODO JTAG conflict
 
     Flasher blue(GPIO_NUM_2, 250);
 
     Encoder right_encoder(GPIO_NUM_17, GPIO_NUM_16);
     Encoder left_encoder(GPIO_NUM_26, GPIO_NUM_25);
 
-    //Motor left_motor(GPIO_NUM_14, GPIO_NUM_27, GPIO_NUM_13, LEDC_TIMER_0, LEDC_CHANNEL_0); // JTAG conflicts
-    Motor left_motor(GPIO_NUM_33, GPIO_NUM_27, GPIO_NUM_32, LEDC_TIMER_0, LEDC_CHANNEL_0);
+    Motor left_motor(GPIO_NUM_14, GPIO_NUM_27, GPIO_NUM_13, LEDC_TIMER_0, LEDC_CHANNEL_0); 
+    // Motor left_motor(GPIO_NUM_33, GPIO_NUM_27, GPIO_NUM_32, LEDC_TIMER_0, LEDC_CHANNEL_0); // JTAG conflicts
     Motor right_motor(GPIO_NUM_18, GPIO_NUM_19, GPIO_NUM_5, LEDC_TIMER_1, LEDC_CHANNEL_1);
 
     MPU6050 mpu;
     mpu.initialize(); // TODO Where does MPU6050 _calibration_ take place?
 
     Segway robot(&left_motor, &right_motor, &left_encoder, &right_encoder, &mpu);
-    timer_setup(&robot);
 
-    while (true) {
+    vTaskDelay(2500 / portTICK_PERIOD_MS); // Allow time for robot to stablize after power-on
+    timer5mS_enable(&robot);
+
+    while (false) {
         vTaskDelay(1000 / portTICK_PERIOD_MS);
         printf("%i %i %i %i %i %i %f\n",
                robot.accelX, robot.accelY, robot.accelZ, robot.gyroX, robot.gyroY, robot.gyroZ, robot.kalmanfilter.angle);
     }
 
-    while (true) {
-        left_motor.run(50);
+    const int speed = 50;
+    while (false) {
+        printf("Encoders %i %i\n", left_encoder.value(), right_encoder.value());
+        left_motor.run(speed);
         vTaskDelay(1000 / portTICK_PERIOD_MS);
-        left_motor.run(-50);
+        printf("Encoders %i %i\n", left_encoder.value(), right_encoder.value());
+        left_motor.run(-speed);
         vTaskDelay(1000 / portTICK_PERIOD_MS);
         left_motor.stop();
+        printf("Encoders %i %i\n", left_encoder.value(), right_encoder.value());
         vTaskDelay(1000 / portTICK_PERIOD_MS);
 
-        right_motor.run(50);
+        printf("Encoders %i %i\n", left_encoder.value(), right_encoder.value());
+        right_motor.run(speed);
         vTaskDelay(1000 / portTICK_PERIOD_MS);
-        right_motor.run(-50);
+        printf("Encoders %i %i\n", left_encoder.value(), right_encoder.value());
+        right_motor.run(-speed);
         vTaskDelay(1000 / portTICK_PERIOD_MS);
         right_motor.stop();
+        printf("Encoders %i %i\n", left_encoder.value(), right_encoder.value());
         vTaskDelay(3000 / portTICK_PERIOD_MS);
     }
+
+    // This procedure must never return
+    while (true) vTaskDelay(portMAX_DELAY);
 }

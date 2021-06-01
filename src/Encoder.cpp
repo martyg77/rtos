@@ -36,7 +36,7 @@ void encoderProcess(Encoder *tcb) {
         state = ((state << 2) | (ab & 0x3)) & 0xf;
         static const int8_t quadratureTable[16] = {0, -1, 1, 0, 1, 0, 0, -1, -1, 0, 0, 1, 0, 1, -1, 0};
         tcb->tally += quadratureTable[state];
-        printf("(%i) Encoder %x %x %i\n", xTaskGetTickCount(), ab, state, tcb->tally);
+        // printf("(%i) Encoder %x %x %i\n", xTaskGetTickCount(), ab, state, tcb->tally);
     }
 
     // We should never reach this point
