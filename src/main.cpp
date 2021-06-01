@@ -45,38 +45,6 @@ void i2c_setup() {
     i2c_driver_install(mpu_i2c_port, I2C_MODE_MASTER, 0, 0, 0);
 }
 
-// Base component initialization required *BEFORE* other global constuctors
-class Init {
-  public:
-    Init() {
-        // ESP_ERROR_CHECK(gpio_install_isr_service(0));
-        // lv_init();
-        // setup_stby_gpio(); // TODO JTAG conflict
-        i2c_setup();
-    }
-} init_me_first;
-
-const gpio_num_t GPIO_LED_RED = GPIO_NUM_0;
-const gpio_num_t GPIO_LED_GREEN = GPIO_NUM_2;
-const gpio_num_t GPIO_LED_BLUE = GPIO_NUM_4;
-
-// Flasher red(GPIO_LED_RED, 250);
-Flasher green(GPIO_LED_GREEN, 300);
-// Flasher blue(GPIO_LED_BLUE, 500);
-
-Encoder right_encoder(GPIO_NUM_17, GPIO_NUM_16);
-Encoder left_encoder(GPIO_NUM_26, GPIO_NUM_25);
-
-//Motor left_motor(GPIO_NUM_14, GPIO_NUM_27, GPIO_NUM_13, LEDC_TIMER_0, LEDC_CHANNEL_0); // JTAG conflicts
-  Motor left_motor(GPIO_NUM_33, GPIO_NUM_27, GPIO_NUM_32, LEDC_TIMER_0, LEDC_CHANNEL_0);
-
-Motor right_motor(GPIO_NUM_18, GPIO_NUM_19, GPIO_NUM_5, LEDC_TIMER_1, LEDC_CHANNEL_1);
-
-MPU6050 mpu;
-
-// So now I need to control the thing, but just getting it to stand straight is enough for now
-Segway robot(&left_motor, &right_motor, &left_encoder, &right_encoder, &mpu);
-
 // 5mS timebase for Segway controller task
 
 const timer_group_t group = TIMER_GROUP_0;
@@ -86,14 +54,14 @@ const int clock_prescaler = 16;
 const int clock_frequency = TIMER_BASE_CLK / clock_prescaler; // Base clock APB 80MHz 
 const uint64_t timer5mS_preset = clock_frequency * Segway::handlerIntervalmS / 1000;
 
-bool timer5mS_ISR(void *p) {
+bool timer5mS_ISR(Segway *robot) {
     BaseType_t wake = pdFALSE;
-    vTaskNotifyGiveFromISR(robot.task, &wake);
+    vTaskNotifyGiveFromISR(robot->task, &wake);
     if (wake == pdTRUE) portYIELD_FROM_ISR(); // Request context switch
     return wake == pdTRUE;
 }
 
-void timer_setup() {
+void timer_setup(Segway *robot) {
     timer_config_t config = {
         .alarm_en = TIMER_ALARM_EN,
         .counter_en = TIMER_PAUSE,
@@ -105,7 +73,7 @@ void timer_setup() {
     timer_init(group, timer, &config);
 
     timer_set_counter_value(group, timer, timer5mS_preset);
-    timer_isr_callback_add(group, timer, timer5mS_ISR, nullptr, 0);
+    timer_isr_callback_add(group, timer, (timer_isr_t)timer5mS_ISR, robot, 0);
     timer_start(group, timer);
 }
 
@@ -114,14 +82,29 @@ void timer_setup() {
 extern "C" { void app_main(); }
 
 void app_main() {
-    ESP_ERROR_CHECK(gpio_install_isr_service(0)); // TODO this breaks if i try to initialize upstairs
+    gpio_install_isr_service(0);
+    i2c_setup();
+    // setup_stby_gpio(); // TODO JTAG conflict
+
+    Flasher blue(GPIO_NUM_2, 250);
+
+    Encoder right_encoder(GPIO_NUM_17, GPIO_NUM_16);
+    Encoder left_encoder(GPIO_NUM_26, GPIO_NUM_25);
+
+    //Motor left_motor(GPIO_NUM_14, GPIO_NUM_27, GPIO_NUM_13, LEDC_TIMER_0, LEDC_CHANNEL_0); // JTAG conflicts
+    Motor left_motor(GPIO_NUM_33, GPIO_NUM_27, GPIO_NUM_32, LEDC_TIMER_0, LEDC_CHANNEL_0);
+    Motor right_motor(GPIO_NUM_18, GPIO_NUM_19, GPIO_NUM_5, LEDC_TIMER_1, LEDC_CHANNEL_1);
+
+    MPU6050 mpu;
     mpu.initialize(); // TODO Where does MPU6050 _calibration_ take place?
-    timer_setup();
+
+    Segway robot(&left_motor, &right_motor, &left_encoder, &right_encoder, &mpu);
+    timer_setup(&robot);
 
     while (true) {
         vTaskDelay(1000 / portTICK_PERIOD_MS);
-        printf("%i %i %i %i %i %i %f\n", 
-            robot.accelX, robot.accelY, robot.accelZ, robot.gyroX, robot.gyroY, robot.gyroZ, robot.kalmanfilter.angle);
+        printf("%i %i %i %i %i %i %f\n",
+               robot.accelX, robot.accelY, robot.accelZ, robot.gyroX, robot.gyroY, robot.gyroZ, robot.kalmanfilter.angle);
     }
 
     while (true) {

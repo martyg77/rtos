@@ -150,8 +150,7 @@ void segwayProcess(Segway *robot) {
     while (true) {
         
         // Notification raised by timer interrupt every 5mS
-        uint32_t i;
-        xTaskNotifyWait(ULONG_MAX, ULONG_MAX, &i, portMAX_DELAY);
+        ulTaskNotifyTake(true, portMAX_DELAY);
 
         // These methods oversee real-time motion control for the robot
         const int every20mS = 20 / robot->handlerIntervalmS; // Used to schedule turn PID
