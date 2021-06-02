@@ -4,10 +4,11 @@
 #include <freertos/task.h>
 
 // Rotary shaft encoder interrupt handlers
-// TODO this comment block belongs elswhere
+// TODO this comment block belongs elsewhere
 
-// Hall-effect encoder magnet has 13 poles, gear reduction to wheel axle is 30:1
-// Therefore both encoder pinA and pinB each provide 13*30=390 pulses/axle revolution
+// AsLong JGB37-520B-12v-178RPM
+// Hall-effect encoder magnet has 11 poles, gear reduction to wheel axle is 56:1
+// Therefore both encoder pinA and pinB each provide 11*56=616 pulses/axle revolution
 
 // Supplied wheels are ~65mm diameter, ~205mm linear displacement per axle revolution 
 
@@ -16,6 +17,7 @@
 
 // Encoder signals are notorious for noise: this may significantly impact calculations
 // Differential mode provides redundancy, which can be leveraged for noise reduction
+// This comes with a higher cost: 616 * 2 signals * 2 edges = 2464 interrupts/rev (for one wheel)
 
 // TODO Arduino artifacts, where is esp-idf/freertos equivalent
 #define constrain(amt,low,high) ((amt)<(low)?(low):((amt)>(high)?(high):(amt)))

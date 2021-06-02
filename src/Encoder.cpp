@@ -6,7 +6,8 @@
 #include <freertos/task.h>
 #include <stdio.h>
 
-void encoderGpioISR(Encoder *tcb) {
+IRAM_ATTR void encoderGpioISR(Encoder *tcb) {
+    ++tcb->samples;
     uint8_t ab = (gpio_get_level(tcb->pinA) << 1) | gpio_get_level(tcb->pinB);
     BaseType_t wake = pdFALSE;
     xQueueSendFromISR(tcb->queue, &ab, &wake);
@@ -36,7 +37,6 @@ void encoderProcess(Encoder *tcb) {
         state = ((state << 2) | (ab & 0x3)) & 0xf;
         static const int8_t quadratureTable[16] = {0, -1, 1, 0, 1, 0, 0, -1, -1, 0, 0, 1, 0, 1, -1, 0};
         tcb->tally += quadratureTable[state];
-        // printf("(%i) Encoder %x %x %i\n", xTaskGetTickCount(), ab, state, tcb->tally);
     }
 
     // We should never reach this point
@@ -44,11 +44,11 @@ void encoderProcess(Encoder *tcb) {
     vTaskDelete(nullptr);
 }
 
-int Encoder::value() { return tally; };
+long Encoder::value() { return tally; };
 
 int Encoder::delta() {
-    int d = tally - deltaPrev;
-    deltaPrev = tally;
+    int d = tally - tallyPrev;
+    tallyPrev = tally;
     return d;
 };
 
