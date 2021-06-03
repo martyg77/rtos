@@ -12,7 +12,7 @@
 
 #pragma once
 
-#include "Encoder.h"
+#include "ESP32Encoder.h"
 #include "KalmanFilter.h"
 #include "Motor.h"
 
@@ -30,7 +30,7 @@ class Segway {
   public:
 
     Segway(Motor *left_motor,  Motor *right_motor,
-            Encoder *left_encoder, Encoder *right_encoder,
+            ESP32Encoder *left_encoder, ESP32Encoder *right_encoder,
             MPU6050 *mpu);
 
     // Timebase for all our digital filters, event to be raised every 5mS
@@ -93,7 +93,7 @@ class Segway {
   private:
     Motor *left_motor = nullptr;
     Motor *right_motor = nullptr;
-    Encoder *left_encoder = nullptr;
-    Encoder *right_encoder = nullptr;
+    ESP32Encoder *left_encoder = nullptr;
+    ESP32Encoder *right_encoder = nullptr;
     MPU6050 *mpu = nullptr; 
 };

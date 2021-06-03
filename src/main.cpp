@@ -1,10 +1,11 @@
 #include "Flasher.h"
 #include "Motor.h"
-#include "Encoder.h"
+#include "ESP32Encoder.h"
 #include "Segway.h"
 
 #include <driver/gpio.h>
 #include <driver/timer.h>
+#include <driver/pcnt.h>
 #include <freertos/task.h>
 #include <MPU6050.h>
 
@@ -83,16 +84,17 @@ extern "C" { void app_main(); }
 
 void app_main() {
     gpio_install_isr_service(0);
+    esp32_encoder_install();
     i2c_setup();
     setup_stby_gpio(); // TODO JTAG conflict
 
-    Flasher blue(GPIO_NUM_2, 250);
+    Flasher red(GPIO_NUM_2, 250);
 
-    Encoder right_encoder(GPIO_NUM_17, GPIO_NUM_16);
-    Encoder left_encoder(GPIO_NUM_26, GPIO_NUM_25);
+    ESP32Encoder right_encoder(GPIO_NUM_17, GPIO_NUM_16, PCNT_UNIT_0);
+    ESP32Encoder left_encoder(GPIO_NUM_26, GPIO_NUM_25, PCNT_UNIT_3);
 
     Motor left_motor(GPIO_NUM_14, GPIO_NUM_27, GPIO_NUM_13, LEDC_TIMER_0, LEDC_CHANNEL_0); 
-    // Motor left_motor(GPIO_NUM_33, GPIO_NUM_27, GPIO_NUM_32, LEDC_TIMER_0, LEDC_CHANNEL_0); // JTAG conflicts
+    // Motor left_motor(GPIO_NUM_33, GPIO_NUM_27, GPIO_NUM_32, LEDC_TIMER_0, LEDC_CHANNEL_0); // WROBER_KIT JTAG conflicts
     Motor right_motor(GPIO_NUM_18, GPIO_NUM_19, GPIO_NUM_5, LEDC_TIMER_1, LEDC_CHANNEL_1);
 
     MPU6050 mpu;
@@ -105,30 +107,37 @@ void app_main() {
 
     while (false) {
         vTaskDelay(1000 / portTICK_PERIOD_MS);
-        printf("%i %i %i %i %i %i %f\n",
-               robot.accelX, robot.accelY, robot.accelZ, robot.gyroX, robot.gyroY, robot.gyroZ, robot.kalmanfilter.angle);
+        // printf("%i %i %i %i %i %i %f\n",
+        //     robot.accelX, robot.accelY, robot.accelZ, robot.gyroX, robot.gyroY, robot.gyroZ, robot.kalmanfilter.angle);
     }
 
-    const int speed = 50;
     while (false) {
-        printf("Encoders %i %i\n", left_encoder.value(), right_encoder.value());
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        printf("%li %li\n", left_encoder.value(), right_encoder.value());
+        // printf("%i %lli %li\n", right_encoder.getHWCount(), right_encoder.tally, right_encoder.value());
+        // printf("%lli %li\n", right_encoder.getCount(), right_encoder.value());
+    }
+
+    const int speed = 100;
+    while (false) {
+        printf("Encoders %li %li\n", left_encoder.value(), right_encoder.value());
         left_motor.run(speed);
         vTaskDelay(1000 / portTICK_PERIOD_MS);
-        printf("Encoders %i %i\n", left_encoder.value(), right_encoder.value());
+        printf("Encoders %li %li\n", left_encoder.value(), right_encoder.value());
         left_motor.run(-speed);
         vTaskDelay(1000 / portTICK_PERIOD_MS);
         left_motor.stop();
-        printf("Encoders %i %i\n", left_encoder.value(), right_encoder.value());
+        printf("Encoders %li %li\n", left_encoder.value(), right_encoder.value());
         vTaskDelay(1000 / portTICK_PERIOD_MS);
 
-        printf("Encoders %i %i\n", left_encoder.value(), right_encoder.value());
+        printf("Encoders %li %li\n", left_encoder.value(), right_encoder.value());
         right_motor.run(speed);
         vTaskDelay(1000 / portTICK_PERIOD_MS);
-        printf("Encoders %i %i\n", left_encoder.value(), right_encoder.value());
+        printf("Encoders %li %li\n", left_encoder.value(), right_encoder.value());
         right_motor.run(-speed);
         vTaskDelay(1000 / portTICK_PERIOD_MS);
         right_motor.stop();
-        printf("Encoders %i %i\n", left_encoder.value(), right_encoder.value());
+        printf("Encoders %li %li\n", left_encoder.value(), right_encoder.value());
         vTaskDelay(3000 / portTICK_PERIOD_MS);
     }
 

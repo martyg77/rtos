@@ -184,7 +184,7 @@ void Segway::resetPidCoefficients() {
 
 // Class constructor
 
-Segway::Segway(Motor *lm,  Motor *rm, Encoder *le, Encoder *re, MPU6050 *m) {
+Segway::Segway(Motor *lm,  Motor *rm, ESP32Encoder *le, ESP32Encoder *re, MPU6050 *m) {
     left_motor = lm;
     right_motor = rm;
     left_encoder = le;
