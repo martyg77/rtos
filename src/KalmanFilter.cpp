@@ -12,7 +12,7 @@ void KalmanFilter::Yiorderfilter(float angle_m, float gyro_m, float dt, float K1
 
 /********************************kalman********************************/
 
-void KalmanFilter::Kalman_Filter(double angle_m, double gyro_m, float dt, float Q_angle, float Q_gyro, float R_angle, float C_0) {
+float KalmanFilter::Kalman_Filter(float angle_m, float gyro_m) {
     angle += (gyro_m - q_bias) * dt;
     angle_err = angle_m - angle;
     Pdot[0] = Q_angle - P[0][1] - P[1][0];
@@ -37,23 +37,24 @@ void KalmanFilter::Kalman_Filter(double angle_m, double gyro_m, float dt, float 
     angle += K_0 * angle_err; //���ŽǶ�
     q_bias += K_1 * angle_err;
     angle_dot = gyro_m - q_bias; //���Ž��ٶ�
+    return angle;
 }
 
-const float PI = 3.14159; // TODO PI has to be a constatnt somewhere, look around trig functions
-
 /********************************Angle test********************************/
-void KalmanFilter::Angletest(int16_t ax, int16_t ay, int16_t az, int16_t gx, int16_t gy, int16_t gz, float dt, float Q_angle, float Q_gyro,
-                             float R_angle, float C_0, float K1) {
-    // int flag;
-    //ƽ�����
-    float Angle = atan2(ay, az) * 180 / PI; //�Ƕȼ��㹫ʽ,Angle:һ�׻����˲��������С��������б�Ƕ�
-    Gyro_x = (gx - 128.1) / 131; //�Ƕ�ת��
-    Kalman_Filter(Angle, Gyro_x, dt, Q_angle, Q_gyro, R_angle, C_0); //�����˲�
+void Angletest(int16_t ax, int16_t ay, int16_t az, int16_t gx, int16_t gy, int16_t gz, 
+                            float dt, float Q_angle, float Q_gyro, float R_angle, float C_0, float K1) {
+
     //��ת�Ƕ�Z�����
     if (gz > 32768) gz -= 65536; // TODO compiler warning comparison always
-    Gyro_z = -gz / 131; //Z�����ת��
-    accelz = az / 16.4;
+    
     float angleAx = atan2(ax, az) * 180 / PI; //������x��н�
-    Gyro_y = -gy / 131.00; //������ٶ�
-    Yiorderfilter(angleAx, Gyro_y, dt, K1); //һ���˲�
+ //   Yiorderfilter(angleAx, Gyro_y, dt, K1); //һ���˲�
+
+    
+    // TODO not sure what this does
+    // This method updates kalmanfilter.angle6
+    // const float K1 = 0.05; // Weight of accelerometer values (Kalman gain)
+    // float Angle_y = atan2(accelX, accelZ) * 180 / PI;
+    // kalmanfilter.Yiorderfilter(Angle_y, Gyro_y, dt, K1);
+
 }

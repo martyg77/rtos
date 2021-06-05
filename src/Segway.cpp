@@ -24,30 +24,21 @@
 
 // Tilt (vertical balancing) angle PID
 // This code runs every 5mS
-// Ref. https://mjwhite8119.github.io/Robots/mpu6050
 
-// TODO document overview of inertial sensing process, provide references - from noisy redundant data to stable attitude measurement
+float Segway::tiltPID() {
 
-// Kalman filter coefficients
-// TODO what do these magic kalman filter constants do, where did these numbers come from, what are othes using
-const float dt = Segway::handlerIntervalmS * 1e-3;
-const float Q_angle = 0.001, Q_gyro = 0.005; // Confidence of angle data and confidence of angular velocity data
-const float R_angle = 0.5, C_0 = 1;
-const float K1 = 0.05; // Weight of accelerometer values
+    // Retrieve raw 6-axis data from inertial sensor, normalize to degrees
+    mpu->getMotion6(&accelX, &accelY, &accelZ, &gyroX, &gyroY, &gyroZ);
+    Gyro_x = gyroX / mpu_gyro_scaling; // Angular velocity about yz-plane
+    Gyro_y = gyroY / mpu_gyro_scaling;
+    Gyro_z = gyroZ / mpu_gyro_scaling;
+    Angle_x = atan2(accelY, accelZ) * 180 / PI;
 
-double Segway::tiltPID() {
-    
-    // Retrieve raw 6-axis data from inertial sensor
-    mpu->getMotion6(&accelX, &accelY, &accelZ, &gyroX, &gyroY, &gyroZ); 
-    
-    // Kalman filtering, angle computation
-    // TODO find a standard Kalman filter library
-    // TODO Kalman filter code requires careful review - Is this butied in new MPC library, what about MotionApps
-    kalmanfilter.Angletest(accelX, accelY, accelZ, gyroX, gyroY, gyroZ, dt, Q_angle, Q_gyro, R_angle, C_0, K1);
-    
+    // Calculate (noise filtered) tilt angle from mpu raw data
+    Angle = kalmanfilter.Kalman_Filter(Angle_x, Gyro_x);
+
     // PID calculation
-    // TODO PID calcuations in standard form
-    return tiltPIDOutput = tiltPIDGains.Kp * kalmanfilter.angle + tiltPIDGains.Kd * kalmanfilter.Gyro_x;
+    return tiltPIDOutput = tiltPIDGains.Kp * Angle + tiltPIDGains.Kd * Gyro_x;
 }
 
 // Angular (turn/spin) velocity PID function
@@ -93,15 +84,15 @@ float Segway::turnPID() {
     turnError = constrain(turnError, -turnLimit, turnLimit);
 
     // PID calculation
+    // TODO PID calcuations in standard form
 
-
-    return turnPIDOutput = -turnError * turnPIDGains.Kp - kalmanfilter.Gyro_z * turnPIDGains.Kd;
+    return turnPIDOutput = -turnError * turnPIDGains.Kp - Gyro_z * turnPIDGains.Kd;
 }
 
 // Linear (forward/back) velocity PID function
 // This code runs every 50mS
 
-double Segway::speedPID() {
+float Segway::speedPID() {
     
     // Encoder pulses since last invocation, crude overall distance estimate
     int d = left_encoder->delta() + right_encoder->delta();
@@ -123,6 +114,7 @@ double Segway::speedPID() {
 }
 
 // Computed motor speeds, direction reversal via controller bitbang
+// TODO incerase PWM resolution 1to 1024 (all in hardware, should cost nothing)
 // Note motors are mounted opposite each other, so must work in opposite directions to move together
 // TODO motor controller also supports brake and stop - are these useful here?
 // This code runs every 5mS
@@ -139,7 +131,7 @@ void Segway::setPWM() {
 
     // If the robot is about to fall over, or already lying on its side, stop both motors
     // TODO original code has stanza for robot being picked up, refers to kalmanfilter.angle6
-    if (abs(kalmanfilter.angle) > 30) leftMotorPWM = rightMotorPWM = 0;
+    if (abs(Angle) > 30) leftMotorPWM = rightMotorPWM = 0;
 
     // Set speed and direction on both motors
     left_motor->run(leftMotorPWM);
@@ -159,8 +151,8 @@ void segwayProcess(Segway *robot) {
         const int every50mS = 50 / robot->handlerIntervalmS; // Used to schedule speed PID
         robot->tick = (robot->tick + 1) % (every20mS * every50mS); // Prevent integer overflow
         robot->tiltPID();
-        //  if (tick % every20mS) turnPID();
-        //  if (tick % every50mS) speedPID();
+        // if (tick % every20mS) turnPID();
+        // if (tick % every50mS) speedPID();
         robot->setPWM();
     }
 }

@@ -86,17 +86,18 @@ void app_main() {
     gpio_install_isr_service(0);
     esp32_encoder_install();
     i2c_setup();
-    setup_stby_gpio(); // TODO JTAG conflict
+//    setup_stby_gpio(); // TODO JTAG conflict WROVER_KIT
 
     Flasher red(GPIO_NUM_2, 250);
 
     ESP32Encoder right_encoder(GPIO_NUM_17, GPIO_NUM_16, PCNT_UNIT_0);
     ESP32Encoder left_encoder(GPIO_NUM_26, GPIO_NUM_25, PCNT_UNIT_3);
 
-    Motor left_motor(GPIO_NUM_14, GPIO_NUM_27, GPIO_NUM_13, LEDC_TIMER_0, LEDC_CHANNEL_0); 
-    // Motor left_motor(GPIO_NUM_33, GPIO_NUM_27, GPIO_NUM_32, LEDC_TIMER_0, LEDC_CHANNEL_0); // WROBER_KIT JTAG conflicts
+ //   Motor left_motor(GPIO_NUM_14, GPIO_NUM_27, GPIO_NUM_13, LEDC_TIMER_0, LEDC_CHANNEL_0); // WROVER_KIT JTAG conflicts
+    Motor left_motor(GPIO_NUM_33, GPIO_NUM_27, GPIO_NUM_32, LEDC_TIMER_0, LEDC_CHANNEL_0);
     Motor right_motor(GPIO_NUM_18, GPIO_NUM_19, GPIO_NUM_5, LEDC_TIMER_1, LEDC_CHANNEL_1);
 
+    // Motion processor: SDA = GPIO_NUM_21; SCL = GPIO_NUM_22
     MPU6050 mpu;
     mpu.initialize(); // TODO Where does MPU6050 _calibration_ take place?
 
@@ -105,20 +106,22 @@ void app_main() {
     vTaskDelay(2500 / portTICK_PERIOD_MS); // Allow time for robot to stablize after power-on
     timer5mS_enable(&robot);
 
-    while (false) {
+    while (true) {
         vTaskDelay(1000 / portTICK_PERIOD_MS);
-        // printf("%i %i %i %i %i %i %f\n",
-        //     robot.accelX, robot.accelY, robot.accelZ, robot.gyroX, robot.gyroY, robot.gyroZ, robot.kalmanfilter.angle);
+        printf("%.1f %.1f %.1f %.1f\n", robot.Gyro_x, robot.Angle_x, robot.Angle, robot.tiltPIDOutput);
     }
 
     while (false) {
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
-        printf("%li %li\n", left_encoder.value(), right_encoder.value());
-        // printf("%i %lli %li\n", right_encoder.getHWCount(), right_encoder.tally, right_encoder.value());
-        // printf("%lli %li\n", right_encoder.getCount(), right_encoder.value());
+        for (int s = -250; s <= 250; s += 50) {
+            right_motor.run(s);
+            int d = right_encoder.delta();
+            vTaskDelay(10000 / portTICK_PERIOD_MS);
+            d = right_encoder.delta();
+            printf("%i %i\n", s, d / 10);
+        }
     }
 
-    const int speed = 100;
+    const int speed = 50;
     while (false) {
         printf("Encoders %li %li\n", left_encoder.value(), right_encoder.value());
         left_motor.run(speed);

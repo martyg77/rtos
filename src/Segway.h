@@ -7,7 +7,7 @@
 // Many cleanups, namespace consistency, attempt to better annotate the code
 
 // Other vendors package the same kit but with different firmware, and different documentation
-// Ref. https://www.elegoo.com/collections/robot-kits/products/elegoo-tumbller-self-balancing-robot-car
+// Ref. htt5ps://www.elegoo.com/collections/robot-kits/products/elegoo-tumbller-self-balancing-robot-car
 // Ref. https://wiki.keyestudio.com/Ks0193_keyestudio_Self-balancing_Car#Project_13:_Bluetooth_Control
 
 #pragma once
@@ -48,25 +48,30 @@ class Segway {
     // Note most of this data is visible im main.cpp, as it created all these objects
 
     typedef struct {
-        double Kp;
-        double Ki;
-        double Kd;
+        float Kp, Ki, Kd;
     } pidCoefficients;
 
     // PID function coefficients, adjustable through console
     // These default settings are recommended as a starting point by the vendor
-    const pidCoefficients tiltPIDDefaults = {90.0, 0.0, 2.5};
+    const pidCoefficients tiltPIDDefaults = {40.0, 0.0, 0.6};
     const pidCoefficients speedPIDDefaults = {5.2, 0.0, 0.0};
     const pidCoefficients turnPIDDefaults = {23.0, 0.0, 0.3};
     void resetPidCoefficients(); // Reset working registers to above defualts
 
+    // Latest MPU sample
+    const int mpu_gyro_scaling = 131; // internal units / degree (FS_SEL=0)
+    const int mpu_accel_scaling = 16384; // internal units / g (AFS_SEL= 0)
+    int16_t accelX, accelY, accelZ; // 3-axis accelerometer (internal unit)
+    int16_t gyroX, gyroY, gyroZ; // 3-axis gyroscope (internal unit)
+    float Gyro_x, Gyro_y, Gyro_z; // 3-axis gyroscope (degrees)
+    float Angle_x; // Estimated (noisy) tilt angle (degrees) about yz-plane
+    float Angle; // Tilt angle (degrees) (noise filtered)
+
     // Tilt (vertical balancing) angle PID, output updated every 5mS
     // Inertial measurement apparatus yields current angular position in 3 dimensions
     pidCoefficients tiltPIDGains = tiltPIDDefaults;
-    int16_t accelX, accelY, accelZ, gyroX, gyroY, gyroZ; // Latest raw input from MPU6050
     KalmanFilter kalmanfilter;
-    // TODO clean up KalmanFilter library, source from generic math library
-    double tiltPIDOutput = 0;
+    float tiltPIDOutput = 0;
 
     // Turn (angular/turn/spin) velocity PID function, output updated every 20mS
     pidCoefficients turnPIDGains = turnPIDDefaults;
@@ -78,16 +83,16 @@ class Segway {
     pidCoefficients speedPIDGains = speedPIDDefaults;
     float speed; // State variable for velocity PID calculation
     float distance; // Travelled since last PID calculation, estimated from encoders
-    double speedPIDOutput = 0;
+    float speedPIDOutput = 0;
 
     // Computed motor controls, output updated every 5mS
-    double leftMotorPWM = 0;
-    double rightMotorPWM = 0;
+    float leftMotorPWM = 0;
+    float rightMotorPWM = 0;
 
     TaskHandle_t task = nullptr;
-    double tiltPID();
+    float tiltPID();
     float turnPID();
-    double speedPID();
+    float speedPID();
     void setPWM();
 
   private:
@@ -95,5 +100,5 @@ class Segway {
     Motor *right_motor = nullptr;
     ESP32Encoder *left_encoder = nullptr;
     ESP32Encoder *right_encoder = nullptr;
-    MPU6050 *mpu = nullptr; 
+    MPU6050 *mpu = nullptr;
 };
