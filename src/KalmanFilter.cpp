@@ -47,7 +47,7 @@ void Angletest(int16_t ax, int16_t ay, int16_t az, int16_t gx, int16_t gy, int16
     //��ת�Ƕ�Z�����
     if (gz > 32768) gz -= 65536; // TODO compiler warning comparison always
     
-    float angleAx = atan2(ax, az) * 180 / PI; //������x��н�
+    float angleAx = atan2(ax, az) * 180 / M_PI; //������x��н�
  //   Yiorderfilter(angleAx, Gyro_y, dt, K1); //һ���˲�
 
     

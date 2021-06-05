@@ -10,8 +10,6 @@
 // TODO document overview of inertial sensing process, provide references - from noisy redundant data to stable attitude measurement
 // Ref. https://mjwhite8119.github.io/Robots/mpu6050
 
-const float PI = 3.14159; // TODO PI has to be a constant somewhere, look around trig functions
-
 class KalmanFilter {
   public:
     

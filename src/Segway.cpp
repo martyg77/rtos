@@ -12,7 +12,7 @@
 float Segway::tiltPID() {
     const int mpu_gyro_scaling = 131; // internal units -> degree (FS_SEL=0)
     const int mpu_accel_scaling = 16384; // internal units -> g (AFS_SEL= 0)
-    const float radians2degrees = 180 / PI;
+    const float radians2degrees = 180 / M_PI;
 
     int16_t accelX, accelY, accelZ; // raw 3-axis accelerometer (internal unit)
     int16_t gyroX, gyroY, gyroZ; // raw 3-axis gyroscope (internal unit)
