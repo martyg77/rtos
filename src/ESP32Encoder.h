@@ -1,9 +1,22 @@
 // Differential encoder support
 // e.g. KY-040 rotary encoder rotary knob
-// e.g. AsLong JGB37-520B-12v-178RPM DC motor, 56:1, 11-pole hall-effect encoder
+// e.g. AsLong JGB37-520B-12v-178RPM 
 
 // This version leverages ESP32 PCNT pulse counters
 // Ref. https://github.com/espressif/esp-idf/tree/master/examples/peripherals/pcnt
+
+// AsLong JGB37-520B-12v-178RPM DC motor, 56:1, 11-pole hall-effect encoder
+// Hall-effect encoder magnet has 11 poles, gear reduction to wheel axle is 56:1
+// Therefore both encoder pinA and pinB each provide 11*56=616 pulses/axle revolution
+
+// Supplied wheels are ~65mm diameter, ~205mm linear displacement per axle revolution 
+
+// One signal (pinA or pinB) sufficient (theoretically) for determining distance only
+// Differential mode (using both pins) provides distance and direction (forward/reverse)
+
+// Encoder signals are notorious for noise: this may significantly impact calculations
+// Differential mode provides redundancy, which can be leveraged for noise reduction
+// This comes with a higher cost: 616 * 2 signals * 2 edges = 2464 interrupts/rev (for one wheel)
 
 #pragma once
 

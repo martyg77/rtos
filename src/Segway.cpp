@@ -3,22 +3,6 @@
 #include <driver/timer.h>
 #include <freertos/task.h>
 
-// Rotary shaft encoder interrupt handlers
-// TODO this comment block belongs elsewhere
-
-// AsLong JGB37-520B-12v-178RPM
-// Hall-effect encoder magnet has 11 poles, gear reduction to wheel axle is 56:1
-// Therefore both encoder pinA and pinB each provide 11*56=616 pulses/axle revolution
-
-// Supplied wheels are ~65mm diameter, ~205mm linear displacement per axle revolution 
-
-// One signal (pinA or pinB) sufficient (theoretically) for determining distance only
-// Differential mode (using both pins) provides distance and direction (forward/reverse)
-
-// Encoder signals are notorious for noise: this may significantly impact calculations
-// Differential mode provides redundancy, which can be leveraged for noise reduction
-// This comes with a higher cost: 616 * 2 signals * 2 edges = 2464 interrupts/rev (for one wheel)
-
 // TODO Arduino artifacts, where is esp-idf/freertos equivalent
 #define constrain(amt,low,high) ((amt)<(low)?(low):((amt)>(high)?(high):(amt)))
 
@@ -26,19 +10,25 @@
 // This code runs every 5mS
 
 float Segway::tiltPID() {
+    const int mpu_gyro_scaling = 131; // internal units -> degree (FS_SEL=0)
+    const int mpu_accel_scaling = 16384; // internal units -> g (AFS_SEL= 0)
+    const float radians2degrees = 180 / PI;
 
-    // Retrieve raw 6-axis data from inertial sensor, normalize to degrees
+    int16_t accelX, accelY, accelZ; // raw 3-axis accelerometer (internal unit)
+    int16_t gyroX, gyroY, gyroZ; // raw 3-axis gyroscope (internal unit)
+
+    // Retrieve raw 6-axis data from inertial sensor, normalize gyro angle to degrees
     mpu->getMotion6(&accelX, &accelY, &accelZ, &gyroX, &gyroY, &gyroZ);
     Gyro_x = gyroX / mpu_gyro_scaling; // Angular velocity about yz-plane
-    Gyro_y = gyroY / mpu_gyro_scaling;
+    Gyro_y = gyroY / mpu_gyro_scaling; // TODO remove Gyro_[yz] if unused
     Gyro_z = gyroZ / mpu_gyro_scaling;
-    Angle_x = atan2(accelY, accelZ) * 180 / PI;
+    Angle_x = atan2(accelY, accelZ) * radians2degrees;
 
     // Calculate (noise filtered) tilt angle from mpu raw data
     Angle = kalmanfilter.Kalman_Filter(Angle_x, Gyro_x);
 
     // PID calculation
-    return tiltPIDOutput = tiltPIDGains.Kp * Angle + tiltPIDGains.Kd * Gyro_x;
+    return tiltPIDOutput = tilt.Kp * (tiltSetPoint - Angle) + tilt.Kd * (0 - Gyro_x);
 }
 
 // Angular (turn/spin) velocity PID function
@@ -86,7 +76,7 @@ float Segway::turnPID() {
     // PID calculation
     // TODO PID calcuations in standard form
 
-    return turnPIDOutput = -turnError * turnPIDGains.Kp - Gyro_z * turnPIDGains.Kd;
+    return turnPIDOutput = -turnError * turn.Kp - Gyro_z * turn.Kd;
 }
 
 // Linear (forward/back) velocity PID function
@@ -100,8 +90,8 @@ float Segway::speedPID() {
     // TODO research digital filter terminology to properly describe this
     // (oem) Carry out low-pass filtering to slow down the speed difference and disturb the upright
     // As this code runs every 50mS, we can easily derive speed from distance travelled
-    float s = speed * 0.7  + d * 0.3;
-    speed = s;
+    float s = velocity * 0.7  + d * 0.3;
+    velocity = s;
 
     // Desired speed = accelerate by f=250 b=-250 on every call, with a speed limit
     // TODO speed PID math below does not make sense
@@ -110,7 +100,7 @@ float Segway::speedPID() {
     distance = constrain(distance, -3550, 3550); // TODO where do these numbers come from
 
     // PID calculation
-    return speedPIDOutput = speedPIDGains.Ki * (0.0 - distance) + speedPIDGains.Kp * (0.0 - s);
+    return speedPIDOutput = speed.Ki * (0.0 - distance) + speed.Kp * (0.0 - s);
 }
 
 // Computed motor speeds, direction reversal via controller bitbang
@@ -124,9 +114,9 @@ void Segway::setPWM() {
     // Raw motor PWM is superposition of our 3 stimuli; probably have embedded coefficients
     // (oem) speed and turn are interference for tilt term
     // TODO what are the measurement units PID function outputs - ultimately i am summing to a PWM value - dimensionless?
-    leftMotorPWM = -tiltPIDOutput - speedPIDOutput - turnPIDOutput; // TODO convert float -> int
-    rightMotorPWM = -tiltPIDOutput - speedPIDOutput + turnPIDOutput;
-    leftMotorPWM = constrain(leftMotorPWM, -255, 255);
+    leftMotorPWM  = (int)(-tiltPIDOutput - speedPIDOutput - turnPIDOutput); 
+    rightMotorPWM = (int)(-tiltPIDOutput - speedPIDOutput + turnPIDOutput);
+    leftMotorPWM  = constrain(leftMotorPWM, -255, 255);
     rightMotorPWM = constrain(rightMotorPWM, -255, 255);
 
     // If the robot is about to fall over, or already lying on its side, stop both motors
@@ -169,9 +159,9 @@ void Segway::stop() {
 }
 
 void Segway::resetPidCoefficients() {
-    tiltPIDGains = tiltPIDDefaults;
-    speedPIDGains = speedPIDDefaults;
-    turnPIDGains = turnPIDDefaults;
+    tilt = tiltPIDDefaults;
+    speed = speedPIDDefaults;
+    turn = turnPIDDefaults;
 }
 
 // Class constructor

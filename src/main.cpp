@@ -10,9 +10,9 @@
 #include <MPU6050.h>
 
 // Motor controller STBY pin; software always enables
-// TODO STBY probably should be strapped in hardware
+// TODO strap STBY high in hardware, save the GPIO pin
 
-const gpio_num_t gpio_stby = GPIO_NUM_12; // TODO JTAG conflict
+const gpio_num_t gpio_stby = GPIO_NUM_12;
 
 void setup_stby_gpio() {
     gpio_pad_select_gpio(gpio_stby);
@@ -86,15 +86,15 @@ void app_main() {
     gpio_install_isr_service(0);
     esp32_encoder_install();
     i2c_setup();
-//    setup_stby_gpio(); // TODO JTAG conflict WROVER_KIT
+    setup_stby_gpio(); // TODO JTAG conflict WROVER_KIT
 
     Flasher red(GPIO_NUM_2, 250);
 
     ESP32Encoder right_encoder(GPIO_NUM_17, GPIO_NUM_16, PCNT_UNIT_0);
     ESP32Encoder left_encoder(GPIO_NUM_26, GPIO_NUM_25, PCNT_UNIT_3);
 
- //   Motor left_motor(GPIO_NUM_14, GPIO_NUM_27, GPIO_NUM_13, LEDC_TIMER_0, LEDC_CHANNEL_0); // WROVER_KIT JTAG conflicts
-    Motor left_motor(GPIO_NUM_33, GPIO_NUM_27, GPIO_NUM_32, LEDC_TIMER_0, LEDC_CHANNEL_0);
+    Motor left_motor(GPIO_NUM_14, GPIO_NUM_27, GPIO_NUM_13, LEDC_TIMER_0, LEDC_CHANNEL_0); 
+    // Motor left_motor(GPIO_NUM_33, GPIO_NUM_27, GPIO_NUM_32, LEDC_TIMER_0, LEDC_CHANNEL_0); // TODO WROVER_KIT JTAG conflicts
     Motor right_motor(GPIO_NUM_18, GPIO_NUM_19, GPIO_NUM_5, LEDC_TIMER_1, LEDC_CHANNEL_1);
 
     // Motion processor: SDA = GPIO_NUM_21; SCL = GPIO_NUM_22
@@ -108,7 +108,10 @@ void app_main() {
 
     while (true) {
         vTaskDelay(1000 / portTICK_PERIOD_MS);
-        printf("%.1f %.1f %.1f %.1f\n", robot.Gyro_x, robot.Angle_x, robot.Angle, robot.tiltPIDOutput);
+        printf("%.1f %.1f | %.1f | %.1f %.1f %.1f | %i %i\n", 
+                robot.Gyro_x, robot.Angle_x, robot.Angle,
+                robot.tiltPIDOutput, robot.speedPIDOutput, robot.turnPIDOutput,
+                robot.leftMotorPWM, robot.rightMotorPWM);
     }
 
     while (false) {
