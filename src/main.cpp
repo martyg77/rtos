@@ -119,6 +119,11 @@ void app_main() {
 
     WiFi network;
     network.connect(WIFI_SSID, WIFI_PASSWORD);
+    while (!network.online) vTaskDelay(100);
+
+    printf("This does not make sense\n");
+    Flasher none(GPIO_NUM_4, 250);
+    Socket echo(3333);
 
     vTaskDelay(2500 / portTICK_PERIOD_MS); // Allow time for robot to stablize after power-on
     timer5mS_enable(&robot);

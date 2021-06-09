@@ -54,7 +54,7 @@ static void tcp_server_task(void *p) {
     int ip_protocol = 0;
     struct sockaddr_in6 dest_addr;
 
-    while (true) vTaskDelay(portMAX_DELAY); // Hack
+    // while (true) vTaskDelay(portMAX_DELAY); // Hack
 
     struct sockaddr_in *dest_addr_ip4 = (struct sockaddr_in *)&dest_addr;
     dest_addr_ip4->sin_addr.s_addr = htonl(INADDR_ANY);
@@ -117,5 +117,5 @@ CLEAN_UP:
 }
 
 Socket::Socket(int port) {
-    // xTaskCreate(tcp_server_task, "tcp_server", 4096, nullptr, 5, nullptr);
+    xTaskCreate(tcp_server_task, "tcp_server", 4096, nullptr, 5, nullptr);
 }
