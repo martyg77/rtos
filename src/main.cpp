@@ -1,13 +1,22 @@
+#include "ESP32Encoder.h"
 #include "Flasher.h"
 #include "Motor.h"
-#include "ESP32Encoder.h"
 #include "Segway.h"
+#include "Socket.h"
+#include "WiFi.h"
 
-#include <driver/gpio.h>
-#include <driver/timer.h>
-#include <driver/pcnt.h>
-#include <freertos/task.h>
 #include <MPU6050.h>
+#include <assert.h>
+#include <driver/gpio.h>
+#include <driver/pcnt.h>
+#include <driver/timer.h>
+#include <freertos/task.h>
+#include <nvs_flash.h>
+
+// Ensure WiFi credentials don't get uploaded to GitHub
+// #define WIFI_SSID        "myssid"
+// #define WIFI_PASSWORD    "mypassword"
+#include ".wifi"
 
 // Motor controller STBY pin; software always enables
 // TODO strap STBY high in hardware, save the GPIO pin
@@ -86,8 +95,13 @@ void app_main() {
     gpio_install_isr_service(0);
     esp32_encoder_install();
     i2c_setup();
-    setup_stby_gpio(); // TODO JTAG conflict WROVER_KIT
 
+    assert(nvs_flash_init() == ESP_OK);
+    esp_netif_init();
+    esp_event_loop_create_default();
+
+    setup_stby_gpio(); // TODO JTAG conflict WROVER_KIT
+    
     Flasher red(GPIO_NUM_2, 250);
 
     ESP32Encoder right_encoder(GPIO_NUM_17, GPIO_NUM_16, PCNT_UNIT_0);
@@ -103,10 +117,13 @@ void app_main() {
 
     Segway robot(&left_motor, &right_motor, &left_encoder, &right_encoder, &mpu);
 
+    WiFi network;
+    network.connect(WIFI_SSID, WIFI_PASSWORD);
+
     vTaskDelay(2500 / portTICK_PERIOD_MS); // Allow time for robot to stablize after power-on
     timer5mS_enable(&robot);
 
-    while (true) {
+    while (false) {
         vTaskDelay(1000 / portTICK_PERIOD_MS);
         printf("%.1f %.1f | %.1f | %.1f %.1f %.1f | %i %i\n", 
                 robot.Gyro_x, robot.Angle_x, robot.Angle,
