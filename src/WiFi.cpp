@@ -34,7 +34,7 @@ static void on_got_ip(WiFi *p, esp_event_base_t base, int32_t id, ip_event_got_i
     ESP_LOGI(TAG, "Interface \"%s\" address: " IPSTR, esp_netif_get_desc(p->netif), IP2STR(&p->ipv4));
 
     p->online = true;
-    if (p->state_cb) p->state_cb(true);
+    if (p->state_cb) p->state_cb(p);
 }
 
 static void on_wifi_disconnect(WiFi *p, esp_event_base_t base, int32_t id, wifi_event_sta_disconnected_t *info) {
@@ -44,7 +44,7 @@ static void on_wifi_disconnect(WiFi *p, esp_event_base_t base, int32_t id, wifi_
     ESP_LOGI(TAG, "Disconnected!, reason=%i", info->reason);
 
     p->online = false;
-    if (p->state_cb) p->state_cb(false);
+    if (p->state_cb) p->state_cb(p);
 }
 
 void WiFi::connect(const char *s, const char *p) {
@@ -59,6 +59,7 @@ void WiFi::connect(const char *s, const char *p) {
 
     assert(strlen(ssid) < sizeof(sta.sta.ssid));
     assert(strlen(password) < sizeof(sta.sta.password));
+    bzero(&sta, sizeof(sta));
     memcpy(sta.sta.ssid, ssid, strlen(ssid) + 1);
     memcpy(sta.sta.password, password, strlen(password) + 1);
     sta.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
@@ -68,6 +69,8 @@ void WiFi::connect(const char *s, const char *p) {
     esp_wifi_start();
     ESP_LOGI(TAG, "Connecting to %s", sta.sta.ssid);
 }
+
+void WiFi::reconnect() { if (!online) esp_wifi_connect(); }
 
 // TODO disconnect/destructor untested
 

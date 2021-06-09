@@ -2,7 +2,7 @@
 #include "Flasher.h"
 #include "Motor.h"
 #include "Segway.h"
-#include "Socket.h"
+#include "TCPServer.h"
 #include "WiFi.h"
 
 #include <MPU6050.h>
@@ -10,6 +10,7 @@
 #include <driver/gpio.h>
 #include <driver/pcnt.h>
 #include <driver/timer.h>
+#include <esp_log.h>
 #include <freertos/task.h>
 #include <nvs_flash.h>
 
@@ -89,6 +90,8 @@ void timer5mS_enable(Segway *robot) {
 
 // Main program
 
+void network_state_cb(WiFi *p) { if (!p->online) p->reconnect(); }
+
 extern "C" { void app_main(); }
 
 void app_main() {
@@ -99,6 +102,7 @@ void app_main() {
     assert(nvs_flash_init() == ESP_OK);
     esp_netif_init();
     esp_event_loop_create_default();
+    esp_wifi_set_default_wifi_sta_handlers();
 
     setup_stby_gpio(); // TODO JTAG conflict WROVER_KIT
     
@@ -118,12 +122,10 @@ void app_main() {
     Segway robot(&left_motor, &right_motor, &left_encoder, &right_encoder, &mpu);
 
     WiFi network;
+    network.state_cb = network_state_cb;
     network.connect(WIFI_SSID, WIFI_PASSWORD);
-    while (!network.online) vTaskDelay(100);
-
-    printf("This does not make sense\n");
-    Flasher none(GPIO_NUM_4, 250);
-    Socket echo(3333);
+    while (!network.online) vTaskDelay(100 / portTICK_PERIOD_MS);
+    TCPServer echo(3333, TCPServer::echo_service);
 
     vTaskDelay(2500 / portTICK_PERIOD_MS); // Allow time for robot to stablize after power-on
     timer5mS_enable(&robot);

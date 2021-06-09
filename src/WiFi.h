@@ -14,11 +14,11 @@
 class WiFi {
   public:
     void connect(const char *ssid, const char *password);
-    void reconnect() { esp_wifi_connect(); }
+    void reconnect();
     void disconnect();
 
     bool online = false;
-    void (*state_cb)(bool online) = nullptr; // Called on ESP event loop timeslice
+    void (*state_cb)(WiFi *p) = nullptr; // Called on ESP event loop timeslice
 
     esp_ip4_addr_t ipv4 = {.addr = 0};
 
@@ -27,5 +27,5 @@ class WiFi {
 
     esp_netif_t *netif = esp_netif_create_default_wifi_sta();
     wifi_init_config_t phy = WIFI_INIT_CONFIG_DEFAULT();
-    wifi_config_t sta;
+    wifi_config_t sta; // Must be initialized to zeroes
 };
