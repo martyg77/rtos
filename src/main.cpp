@@ -3,6 +3,7 @@
 #include "Flasher.h"
 #include "Motor.h"
 #include "Segway.h"
+#include "Telemetry.h"
 #include "WiFi.h"
 
 #include <MPU6050.h>
@@ -126,17 +127,10 @@ void app_main() {
     network.connect(WIFI_SSID, WIFI_PASSWORD);
     while (!network.online) vTaskDelay(100 / portTICK_PERIOD_MS);
     Echo echo(3333);
+    Telemetry telemetry(4444, &robot);
 
     vTaskDelay(2500 / portTICK_PERIOD_MS); // Allow time for robot to stablize after power-on
     timer5mS_enable(&robot);
-
-    while (false) {
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
-        printf("%.1f %.1f | %.1f | %.1f %.1f %.1f | %i %i\n", 
-                robot.Gyro_x, robot.Angle_x, robot.Angle,
-                robot.tiltPIDOutput, robot.speedPIDOutput, robot.turnPIDOutput,
-                robot.leftMotorPWM, robot.rightMotorPWM);
-    }
 
     while (false) {
         for (int s = -250; s <= 250; s += 50) {
