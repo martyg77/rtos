@@ -1,8 +1,8 @@
 #include "ESP32Encoder.h"
+#include "Echo.h"
 #include "Flasher.h"
 #include "Motor.h"
 #include "Segway.h"
-#include "TCPServer.h"
 #include "WiFi.h"
 
 #include <MPU6050.h>
@@ -125,7 +125,7 @@ void app_main() {
     network.state_cb = network_state_cb;
     network.connect(WIFI_SSID, WIFI_PASSWORD);
     while (!network.online) vTaskDelay(100 / portTICK_PERIOD_MS);
-    TCPServer echo(3333, TCPServer::echo_service);
+    Echo echo(3333);
 
     vTaskDelay(2500 / portTICK_PERIOD_MS); // Allow time for robot to stablize after power-on
     timer5mS_enable(&robot);

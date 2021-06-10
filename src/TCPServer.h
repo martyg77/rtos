@@ -1,8 +1,9 @@
+#pragma once
+
 #include <lwip/sockets.h>
 
 class TCPServer {
-    public:
-
+  public:
     typedef void (*service_t)(const TCPServer *p, const int fd);
 
     TCPServer(const int port, const service_t service);
@@ -11,10 +12,9 @@ class TCPServer {
 
     int listener_fd = 0;
     int accepted_fd = 0;
-    
+
     sockaddr_in dest;
     sockaddr_in src;
 
     service_t service = nullptr;
-    static void echo_service(const TCPServer *p, const int sock);
 };

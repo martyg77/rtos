@@ -16,36 +16,6 @@
 #include <sys/param.h>
 #include <assert.h>
 
-static const char *TAGE = "echo";
-
-void TCPServer::echo_service(const TCPServer *p, const int sock) {
-    int len;
-    char rx_buffer[128];
-
-    do {
-        len = recv(sock, rx_buffer, sizeof(rx_buffer) - 1, 0);
-        if (len < 0) {
-            ESP_LOGE(TAGE, "Error occurred during receiving: errno %d", errno);
-        } else if (len == 0) {
-            ESP_LOGW(TAGE, "Connection closed");
-        } else {
-            rx_buffer[len] = 0; // Null-terminate whatever is received and treat it like a string
-            ESP_LOGI(TAGE, "Received %d bytes: %s", len, rx_buffer);
-
-            // send() can return less bytes than supplied length.
-            // Walk-around for robust implementation.
-            int to_write = len;
-            while (to_write > 0) {
-                int written = send(sock, rx_buffer + (len - to_write), to_write, 0);
-                if (written < 0) {
-                    ESP_LOGE(TAGE, "Error occurred during sending: errno %d", errno);
-                }
-                to_write -= written;
-            }
-        }
-    } while (len > 0);
-}
-
 static const char *TAG = "TCP";
 
 void tcp_server_task(TCPServer *p) {
@@ -97,5 +67,6 @@ void tcp_server_task(TCPServer *p) {
 TCPServer::TCPServer(const int p, const service_t s) {
     port = p;
     service = s;
+    // TODO include port number in task anme string
     xTaskCreate((TaskFunction_t)tcp_server_task, "tcp_server", 4096, this, 5, nullptr);
 }
