@@ -141,8 +141,8 @@ void segwayProcess(Segway *robot) {
         const int every50mS = 50 / robot->handlerIntervalmS; // Used to schedule speed PID
         robot->tick = (robot->tick + 1) % (every20mS * every50mS); // Prevent integer overflow
         robot->tiltPID();
-        // if (tick % every20mS) turnPID();
-        // if (tick % every50mS) speedPID();
+        // if (!(robot->tick % every20mS)) robot->turnPID();
+        // if (!(robot->tick % every50mS)) robot->speedPID();
         robot->setPWM();
     }
 }

@@ -1,3 +1,4 @@
+#include "Cockpit.h"
 #include "ESP32Encoder.h"
 #include "Echo.h"
 #include "Flasher.h"
@@ -105,15 +106,20 @@ void app_main() {
     esp_event_loop_create_default();
     esp_wifi_set_default_wifi_sta_handlers();
 
-    setup_stby_gpio(); // TODO JTAG conflict WROVER_KIT
-    
+#ifndef JTAG
+    setup_stby_gpio();
+#endif
+
     Flasher red(GPIO_NUM_2, 250);
 
     ESP32Encoder right_encoder(GPIO_NUM_17, GPIO_NUM_16, PCNT_UNIT_0);
     ESP32Encoder left_encoder(GPIO_NUM_26, GPIO_NUM_25, PCNT_UNIT_3);
 
+#ifdef JTAG
+    Motor left_motor(GPIO_NUM_33, GPIO_NUM_27, GPIO_NUM_32, LEDC_TIMER_0, LEDC_CHANNEL_0);
+#else
     Motor left_motor(GPIO_NUM_14, GPIO_NUM_27, GPIO_NUM_13, LEDC_TIMER_0, LEDC_CHANNEL_0); 
-    // Motor left_motor(GPIO_NUM_33, GPIO_NUM_27, GPIO_NUM_32, LEDC_TIMER_0, LEDC_CHANNEL_0); // TODO WROVER_KIT JTAG conflicts
+#endif
     Motor right_motor(GPIO_NUM_18, GPIO_NUM_19, GPIO_NUM_5, LEDC_TIMER_1, LEDC_CHANNEL_1);
 
     // Motion processor: SDA = GPIO_NUM_21; SCL = GPIO_NUM_22
@@ -128,6 +134,7 @@ void app_main() {
     while (!network.online) vTaskDelay(100 / portTICK_PERIOD_MS);
     Echo echo(3333);
     Telemetry telemetry(4444, &robot);
+    Cockpit cockpit(5555, &robot);
 
     vTaskDelay(2500 / portTICK_PERIOD_MS); // Allow time for robot to stablize after power-on
     timer5mS_enable(&robot);
