@@ -16,14 +16,11 @@
 #include <sys/param.h>
 #include <assert.h>
 
-static const char *TAG = "TCP";
-
 void tcp_server_task(TCPServer *p) {
 
     // Create unbound socket
     p->listener_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
     assert(p->listener_fd >= 0);
-    ESP_LOGI(TAG, "Socket created");
 
     // Assign local address to unnamed socket
     bzero(&p->dest, sizeof(p->dest));
@@ -33,7 +30,6 @@ void tcp_server_task(TCPServer *p) {
 
     int rc = bind(p->listener_fd, (sockaddr *)&p->dest, sizeof(p->dest));
     assert(rc == 0);
-    ESP_LOGI(TAG, "Socket bound, port %d", p->port);
 
     // Mark the socket as accepting connections
     rc = listen(p->listener_fd, 1);
@@ -42,16 +38,16 @@ void tcp_server_task(TCPServer *p) {
     while (true) {
 
         // Accept a new connection
-        ESP_LOGI(TAG, "Socket listening");
+        ESP_LOGI(p->label, "Listening");
         socklen_t len = sizeof(p->src);
         p->accepted_fd = accept(p->listener_fd, (sockaddr *)&p->src, &len);
         assert(p->accepted_fd >= 0);
 
         char addr_str[32];
         inet_ntoa_r(p->src.sin_addr.s_addr, addr_str, sizeof(addr_str) - 1);
-        ESP_LOGI(TAG, "Socket accepted ip address: %s", addr_str);
+        ESP_LOGI(p->label, "Accepted %s:%i", addr_str, p->src.sin_port);
 
-        // Process the incoming stream
+        // Process the incoming stream until user quits or something goes wrong
         p->service(p, p->accepted_fd);
 
         // Close the connection and recycle for the next client
@@ -67,6 +63,6 @@ void tcp_server_task(TCPServer *p) {
 TCPServer::TCPServer(const int p, const service_t s) {
     port = p;
     service = s;
-    // TODO include port number in task anme string
-    xTaskCreate((TaskFunction_t)tcp_server_task, "tcp_server", 4096, this, 5, nullptr);
+    snprintf(label, sizeof(label), "tcp:%i", port);
+    xTaskCreate((TaskFunction_t)tcp_server_task, label, 4096, this, 5, nullptr);
 }

@@ -9,6 +9,7 @@ class TCPServer {
     TCPServer(const int port, const service_t service);
 
     int port = 0;
+    char label[32] = "";
 
     int listener_fd = 0;
     int accepted_fd = 0;
