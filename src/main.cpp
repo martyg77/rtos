@@ -1,4 +1,5 @@
 #include "Cockpit.h"
+#include "Console.h"
 #include "ESP32Encoder.h"
 #include "Echo.h"
 #include "Flasher.h"
@@ -132,45 +133,14 @@ void app_main() {
     network.state_cb = network_state_cb;
     network.connect(WIFI_SSID, WIFI_PASSWORD);
     while (!network.online) vTaskDelay(100 / portTICK_PERIOD_MS);
+
     Echo echo(3333);
     Telemetry telemetry(4444, &robot);
     Cockpit cockpit(5555, &robot);
+    Console console(6666);
 
     vTaskDelay(2500 / portTICK_PERIOD_MS); // Allow time for robot to stablize after power-on
     timer5mS_enable(&robot);
-
-    while (false) {
-        for (int s = -250; s <= 250; s += 50) {
-            right_motor.run(s);
-            int d = right_encoder.delta();
-            vTaskDelay(10000 / portTICK_PERIOD_MS);
-            d = right_encoder.delta();
-            printf("%i %i\n", s, d / 10);
-        }
-    }
-
-    const int speed = 50;
-    while (false) {
-        printf("Encoders %li %li\n", left_encoder.value(), right_encoder.value());
-        left_motor.run(speed);
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
-        printf("Encoders %li %li\n", left_encoder.value(), right_encoder.value());
-        left_motor.run(-speed);
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
-        left_motor.stop();
-        printf("Encoders %li %li\n", left_encoder.value(), right_encoder.value());
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
-
-        printf("Encoders %li %li\n", left_encoder.value(), right_encoder.value());
-        right_motor.run(speed);
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
-        printf("Encoders %li %li\n", left_encoder.value(), right_encoder.value());
-        right_motor.run(-speed);
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
-        right_motor.stop();
-        printf("Encoders %li %li\n", left_encoder.value(), right_encoder.value());
-        vTaskDelay(3000 / portTICK_PERIOD_MS);
-    }
 
     // This procedure must never return
     while (true) vTaskDelay(portMAX_DELAY);
