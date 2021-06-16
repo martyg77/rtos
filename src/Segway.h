@@ -11,8 +11,12 @@
 #include "ESP32Encoder.h"
 #include "KalmanFilter.h"
 #include "Motor.h"
+#include "Segway.h"
+#include "TCPServer.h"
 
 #include <MPU6050.h>
+#include <esp_log.h>
+#include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
 // TODO carefully think through fail-safe modes, especially for software errors and runaway conditions
@@ -88,4 +92,37 @@ class Segway {
     ESP32Encoder *left_encoder = nullptr;
     ESP32Encoder *right_encoder = nullptr;
     MPU6050 *mpu = nullptr;
+};
+
+// Helm interface
+
+class Helm : public TCPServer {
+  public:
+    Helm(const int port, Segway *robot);
+
+  private:
+    Segway *robot = nullptr;
+    static void service(const Helm *p, const int fd);
+};
+
+// Telemetry interface
+
+class Telemetry : public TCPServer {
+  public:
+    Telemetry(const int port, const Segway *robot);
+
+  private:
+    const Segway *robot = nullptr;
+    static void service(const Telemetry *p, const int fd);
+};
+
+// Console interface
+
+class Console : public TCPServer {
+  public:
+    Console(const int port);
+
+  private:
+    int port = 0;
+    static void service(const Console *p, const int fd);
 };

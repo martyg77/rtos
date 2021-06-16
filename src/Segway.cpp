@@ -3,15 +3,25 @@
 #include <driver/timer.h>
 #include <freertos/task.h>
 
+#include <argtable3/argtable3.h>
+#include <driver/uart.h>
+#include <esp_console.h>
+#include <esp_log.h>
+#include <linenoise/linenoise.h>
+#include <string.h>
+
 // TODO Arduino artifacts, where is esp-idf/freertos equivalent
 #define constrain(amt,low,high) ((amt)<(low)?(low):((amt)>(high)?(high):(amt)))
 
 // Tilt (vertical balancing) angle PID
 // This code runs every 5mS
 
+#define UNUSED(x) (void)(x) // Ref. https://stackoverflow.com/questions/3599160
+
 float Segway::tiltPID() {
     const int mpu_gyro_scaling = 131; // internal units -> degree (FS_SEL=0)
     const int mpu_accel_scaling = 16384; // internal units -> g (AFS_SEL= 0)
+    UNUSED(mpu_accel_scaling);
     const float radians2degrees = 180 / M_PI;
 
     int16_t accelX, accelY, accelZ; // raw 3-axis accelerometer (internal unit)
@@ -177,4 +187,139 @@ Segway::Segway(Motor *lm,  Motor *rm, ESP32Encoder *le, ESP32Encoder *re, MPU605
     resetPidCoefficients();
 
     xTaskCreate((TaskFunction_t)segwayProcess, "segway", configMINIMAL_STACK_SIZE * 4, this, 5, &task);
+}
+
+// Helm interface 
+
+Helm::Helm(const int port, Segway *r) : TCPServer(port, (TCPServer::service_t)service) {
+    robot = r;
+}
+
+void Helm::service(const Helm *p, const int fd) {
+    char c;
+
+    static const char *TAG = "cockpit";
+
+    // Design intent is to use numeric keypad as makeshift joystick
+    while (recv(fd, &c, sizeof(c), 0) > 0) {
+        ESP_LOGW(TAG, "%c", c);
+        switch (c) {
+        case '2':
+            p->robot->speedSetPoint -= 25;
+            break;
+        case '4':
+            p->robot->turnSetPoint = (p->robot->turnSetPoint - 30) % 360;
+            break;
+        case '6':
+            p->robot->turnSetPoint = (p->robot->turnSetPoint + 30) % 360;
+            break;
+        case '8':
+            p->robot->speedSetPoint += 25;
+            break;
+        default:
+            p->robot->stop();
+            break;
+        }
+    }
+}
+
+// Telemetry interface
+
+Telemetry::Telemetry(const int port, const Segway *r) : TCPServer(port, (TCPServer::service_t)service) {
+    robot = r;
+}
+
+void Telemetry::service(const Telemetry *p, const int fd) {
+    while (true) {
+        int x = dprintf(fd, "%i | %.1f %.1f | %.1f | %.1f %.1f %.1f | %i %i\n",
+                        xTaskGetTickCount(),
+                        p->robot->Gyro_x, p->robot->Angle_x, p->robot->Angle,
+                        p->robot->tiltPIDOutput, p->robot->speedPIDOutput, p->robot->turnPIDOutput,
+                        p->robot->leftMotorPWM, p->robot->rightMotorPWM);
+        if (x < 0) return;
+        vTaskDelay(100 / portTICK_PERIOD_MS);
+    }
+}
+
+// Console interface
+
+void Console::service(const Console *p, const int fd) {
+
+    stdin = fdopen(p->accepted_fd, "r");
+    stdout = fdopen(p->accepted_fd, "w");
+
+    char s[256];
+    int rc;
+
+    while (fgets(s, sizeof(s), stdin)) {
+        strtok(s, "\n"); // Strip trailing newline
+        strtok(s, "\r"); // Strip trailing carriage return
+        esp_err_t err = esp_console_run(s, &rc);
+        if (err == ESP_ERR_NOT_FOUND) {
+            printf("Unrecognized command\n");
+        } else if (err == ESP_ERR_INVALID_ARG) {
+            // command was empty
+        } else if (err == ESP_OK && rc != ESP_OK) {
+            printf("Command returned non-zero error code: 0x%x (%s)\n", rc, esp_err_to_name(rc));
+        } else if (err != ESP_OK) {
+            printf("Internal error: %s\n", esp_err_to_name(err));
+        }
+        fflush(stdout);
+    }
+    fclose(stdin);
+    fclose(stdout);
+}
+
+static float Kp, Ki, Kd;
+
+static struct {
+    struct arg_dbl *Kp = arg_dbl1(nullptr, nullptr, "<Kp>", "PID proportional gain");
+    struct arg_dbl *Ki = arg_dbl1(nullptr, nullptr, "<Ki>", "PID integral gain");
+    struct arg_dbl *Kd = arg_dbl1(nullptr, nullptr, "<Kd>", "PID differential gain");
+    struct arg_end *end = arg_end(5);
+} tilt_args;
+
+int tilt(int argc, char **argv) {
+    if (arg_parse(argc, argv, (void **)&tilt_args) > 0) {
+        arg_print_errors(stdout, tilt_args.end, argv[0]);
+        return 1;
+    }
+
+    Kp = tilt_args.Kp->dval[0];
+    Ki = tilt_args.Ki->dval[0];
+    Kd = tilt_args.Kd->dval[0];
+
+    return 0;
+}
+
+int pid(int argc, char **argv) {
+    printf("Tilt: Kp %f Ki %f Kd %f\n", Kp, Ki, Kd);
+    return 0;
+}
+
+Console::Console(const int p) : TCPServer(p, (TCPServer::service_t)service) {
+    port = p;
+
+    esp_console_config_t console_config = ESP_CONSOLE_CONFIG_DEFAULT();
+    esp_console_init(&console_config);
+
+    esp_console_register_help_command();
+
+    const esp_console_cmd_t tilt_cmd = {
+        .command = "tilt",
+        .help = "Adjust tilt PID gains",
+        .hint = nullptr,
+        .func = tilt,
+        .argtable = (void *)&tilt_args,
+    };
+    esp_console_cmd_register(&tilt_cmd);
+
+    const esp_console_cmd_t pid_cmd = {
+        .command = "pid",
+        .help = "Display adjustable PID gains",
+        .hint = nullptr,
+        .func = pid,
+        .argtable = arg_end(5),
+    };
+    esp_console_cmd_register(&pid_cmd);
 }

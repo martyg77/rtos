@@ -1,11 +1,8 @@
-#include "Cockpit.h"
-#include "Console.h"
 #include "ESP32Encoder.h"
 #include "Echo.h"
 #include "Flasher.h"
 #include "Motor.h"
 #include "Segway.h"
-#include "Telemetry.h"
 #include "WiFi.h"
 
 #include <MPU6050.h>
@@ -136,7 +133,7 @@ void app_main() {
 
     Echo echo(3333);
     Telemetry telemetry(4444, &robot);
-    Cockpit cockpit(5555, &robot);
+    Helm cockpit(5555, &robot);
     Console console(6666);
 
     vTaskDelay(2500 / portTICK_PERIOD_MS); // Allow time for robot to stablize after power-on
