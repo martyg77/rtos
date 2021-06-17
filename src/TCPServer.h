@@ -12,30 +12,22 @@
 
 class TCPServer {
   public:
+
     // Socket server prototype
     // Called with stdin/stdout redirected to socket client
-    typedef void (*service_t)(const TCPServer *p, const int fd);
+    typedef void (*service_t)();
+    static void echo();
 
     TCPServer(const int port, const service_t service);
 
     int port = 0;
-    service_t service = nullptr;
+    service_t service = echo;
     char label[32] = "";
+    TaskHandle_t task = nullptr;
 
     int listener_fd = 0;
     int accepted_fd = 0;
 
     sockaddr_in dest;
     sockaddr_in src;
-};
-
-// Echo service, useful for troubleshooting
-
-class Echo : public TCPServer {
-  public:
-    Echo(const int port) : TCPServer(port, stdio) {}
-
-  private:
-    static void stdio(const TCPServer *p, const int fd);
-    static void socket(const TCPServer *p, const int fd);
 };

@@ -49,14 +49,15 @@ void tcp_server_task(TCPServer *p) {
         ESP_LOGI(p->label, "Accepted %s:%i", addr_str, p->src.sin_port);
 
         // Redirect stdin/stdout to client connection
-        // Note stdin/stdout are process-specific, can be direclty assigned
+        // Note stdin/stdout are process-specific, can be directly assigned
+        // Other processes may be banging the original streams, so leave them alone
         FILE *in = stdin;
         FILE *out = stdout;
         stdin = fdopen(p->accepted_fd, "r");
         stdout = fdopen(p->accepted_fd, "w");
 
         // Process the incoming stream until user quits or something goes wrong
-        p->service(p, p->accepted_fd);
+        p->service();
 
         // Close the connection and recycle for the next client
         fclose(stdin);
@@ -72,14 +73,7 @@ void tcp_server_task(TCPServer *p) {
     vTaskDelete(nullptr);
 }
 
-TCPServer::TCPServer(const int p, const service_t s) {
-    port = p;
-    service = s;
-    snprintf(label, sizeof(label), "tcp:%i", port);
-    xTaskCreate((TaskFunction_t)tcp_server_task, label, 4096, this, 5, nullptr);
-}
-
-void Echo::stdio(const TCPServer *p, const int fd) {
+void TCPServer::echo() {
     char s[256];
 
     while (fgets(s, sizeof(s), stdin)) {
@@ -88,32 +82,9 @@ void Echo::stdio(const TCPServer *p, const int fd) {
     }
 }
 
-void Echo::socket(const TCPServer *p, const int fd) {
-    int len;
-    char rx_buffer[128];
-
-    static const char *TAGE = "echo";
-
-    do {
-        len = recv(fd, rx_buffer, sizeof(rx_buffer) - 1, 0);
-        if (len < 0) {
-            ESP_LOGE(TAGE, "Error occurred during receiving: errno %d - %s", errno, strerror(errno));
-        } else if (len == 0) {
-            ESP_LOGW(TAGE, "Connection closed");
-        } else {
-            rx_buffer[len] = 0; // Null-terminate whatever is received and treat it like a string
-            ESP_LOGI(TAGE, "Received %d bytes: %s", len, rx_buffer);
-
-            // send() can return less bytes than supplied length.
-            // Walk-around for robust implementation.
-            int to_write = len;
-            while (to_write > 0) {
-                int written = send(fd, rx_buffer + (len - to_write), to_write, 0);
-                if (written < 0) {
-                    ESP_LOGE(TAGE, "Error occurred during sending: errno %d - %s", errno, strerror(errno));
-                }
-                to_write -= written;
-            }
-        }
-    } while (len > 0);
+TCPServer::TCPServer(const int p, const service_t s) {
+    port = p;
+    service = s;
+    snprintf(label, sizeof(label), "tcp:%i", port);
+    xTaskCreate((TaskFunction_t)tcp_server_task, label, 4096, this, 5, &task);
 }

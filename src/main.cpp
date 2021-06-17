@@ -103,6 +103,12 @@ void app_main() {
     esp_event_loop_create_default();
     esp_wifi_set_default_wifi_sta_handlers();
 
+    WiFi network;
+    network.state_cb = network_state_cb; 
+    network.connect(WIFI_SSID, WIFI_PASSWORD);
+    while (!network.online) vTaskDelay(100 / portTICK_PERIOD_MS);
+    TCPServer(3333, TCPServer::echo);
+
 #ifndef JTAG
     setup_stby_gpio();
 #endif
@@ -124,16 +130,8 @@ void app_main() {
     mpu.initialize(); // TODO Where does MPU6050 _calibration_ take place?
 
     robot = new Segway(&left_motor, &right_motor, &left_encoder, &right_encoder, &mpu);
-
-    WiFi network;
-    network.state_cb = network_state_cb; 
-    network.connect(WIFI_SSID, WIFI_PASSWORD);
-    while (!network.online) vTaskDelay(100 / portTICK_PERIOD_MS);
-
-    // TODO move to Segway constructor?
-    Echo echo(3333);
-    Telemetry telemetry(4444);
     Helm cockpit(5555);
+    Telemetry telemetry(4444);
     Console console(6666);
 
     vTaskDelay(2500 / portTICK_PERIOD_MS); // Allow time for robot to stablize after power-on
