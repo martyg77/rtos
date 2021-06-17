@@ -246,27 +246,65 @@ int Console::tilt(int argc, char **argv) {
 
 int Console::pid(int argc, char **argv) {
     printf("Tilt: Kp %.2f Ki %.2f Kd %.2f\n", robot->tilt.Kp, robot->tilt.Ki, robot->tilt.Kd);
+    printf("Turn: Kp %.2f Ki %.2f Kd %.2f\n", robot->turn.Kp, robot->turn.Ki, robot->turn.Kd);
+    printf("Speed: Kp %.2f Ki %.2f Kd %.2f\n", robot->speed.Kp, robot->speed.Ki, robot->speed.Kd);
     return 0;
 }
 
-void Console::service(const Console *p, const int fd) {
+void Console::service() {
     char s[256];
     int rc;
 
     while (fgets(s, sizeof(s), stdin)) {
         strtok(s, "\n"); // Strip trailing newline
         strtok(s, "\r"); // Strip trailing carriage return
-        esp_err_t err = esp_console_run(s, &rc);
-        if (err == ESP_ERR_NOT_FOUND) {
+
+        switch (esp_err_t err = esp_console_run(s, &rc)) {
+        case ESP_ERR_NOT_FOUND:
             printf("Unrecognized command: %s\n", s);
-        } else if (err == ESP_ERR_INVALID_ARG) {
-            // command was empty
-        } else if (err == ESP_OK && rc != ESP_OK) {
-            printf("Command returned non-zero error code: 0x%x (%s)\n", rc, esp_err_to_name(rc));
-        } else if (err != ESP_OK) {
+            break;
+        case ESP_ERR_INVALID_ARG:
+            break; // Command was empty
+        case ESP_OK:
+            if (rc != ESP_OK)
+                printf("Command returned non-zero error code: 0x%x (%s)\n", rc, esp_err_to_name(rc));
+            break;
+        default:
             printf("Internal error: %s\n", esp_err_to_name(err));
+            break;
         }
         fflush(stdout);
+    }
+}
+
+// TODO linenoise hangs on startup while figuring out line length (over network)
+
+void Console::parser() {
+    const char *prompt = "> ";
+    int rc;
+
+    while (true) {
+        char *s = linenoise(prompt);
+        if (!s) break;
+        if (strlen(s) > 0) linenoiseHistoryAdd(s);
+
+        switch (esp_err_t err = esp_console_run(s, &rc)) {
+        case ESP_ERR_NOT_FOUND:
+            printf("Unrecognized command: %s\n", s);
+            break;
+        case ESP_ERR_INVALID_ARG:
+            break; // Command was empty
+        case ESP_OK:
+            if (rc != ESP_OK)
+                printf("Command returned non-zero error code: 0x%x (%s)\n", rc, esp_err_to_name(rc));
+            break;
+        default:
+            printf("Internal error: %s\n", esp_err_to_name(err));
+            break;
+        }
+
+        fflush(stdout);
+        linenoiseFree(s);
     }
 }
 

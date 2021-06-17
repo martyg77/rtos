@@ -54,10 +54,9 @@ class Segway {
         float Kp, Ki, Kd;
     } pidCoefficients;
 
-    // These default settings are recommended as a starting point by the vendor
     const pidCoefficients tiltPIDDefaults = {75.0, 0.0, 0.6};
-    const pidCoefficients speedPIDDefaults = {5.2, 0.0, 0.0};
     const pidCoefficients turnPIDDefaults = {23.0, 0.0, 0.3};
+    const pidCoefficients speedPIDDefaults = {5.2, 0.0, 0.0};
 
     // Tilt (vertical balancing) angle PID, output updated every 5mS
     // Inertial measurement apparatus yields current angular position in 3 dimensions
@@ -122,7 +121,8 @@ class Console : public TCPServer {
     Console(const int port);
 
   private:
-    static void service(const Console *p, const int fd);
+    static void service();
+    static void parser();
     static int pid(int argc, char **argv);
     static int tilt(int argc, char **argv);
 };
