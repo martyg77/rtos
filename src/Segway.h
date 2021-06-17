@@ -58,7 +58,6 @@ class Segway {
     const pidCoefficients tiltPIDDefaults = {75.0, 0.0, 0.6};
     const pidCoefficients speedPIDDefaults = {5.2, 0.0, 0.0};
     const pidCoefficients turnPIDDefaults = {23.0, 0.0, 0.3};
-    void resetPidCoefficients(); // Reset working registers to above defaults
 
     // Tilt (vertical balancing) angle PID, output updated every 5mS
     // Inertial measurement apparatus yields current angular position in 3 dimensions

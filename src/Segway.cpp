@@ -161,18 +161,9 @@ void segwayProcess(Segway *robot) {
 // Instrumentation methods for Bluetooth console
 
 void Segway::stop() {
-    tiltSetPoint = 0;
     speedSetPoint = 0;
-    turnSetPoint = 0;
-
     left_motor->stop();
     right_motor->stop();
-}
-
-void Segway::resetPidCoefficients() {
-    tilt = tiltPIDDefaults;
-    speed = speedPIDDefaults;
-    turn = turnPIDDefaults;
 }
 
 Segway::Segway(Motor *lm,  Motor *rm, ESP32Encoder *le, ESP32Encoder *re, MPU6050 *m) {
@@ -183,7 +174,6 @@ Segway::Segway(Motor *lm,  Motor *rm, ESP32Encoder *le, ESP32Encoder *re, MPU605
     mpu = m;
 
     stop();
-    resetPidCoefficients();
 
     xTaskCreate((TaskFunction_t)segwayProcess, "segway", configMINIMAL_STACK_SIZE * 4, this, 6, &task);
 }
