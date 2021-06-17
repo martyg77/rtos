@@ -11,10 +11,10 @@
 #include "ESP32Encoder.h"
 #include "KalmanFilter.h"
 #include "Motor.h"
-#include "Segway.h"
 #include "TCPServer.h"
 
 #include <MPU6050.h>
+#include <argtable3/argtable3.h>
 #include <esp_log.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
@@ -25,10 +25,9 @@
 
 class Segway {
   public:
-
-    Segway(Motor *left_motor,  Motor *right_motor,
-            ESP32Encoder *left_encoder, ESP32Encoder *right_encoder,
-            MPU6050 *mpu);
+    Segway(Motor *left_motor, Motor *right_motor,
+           ESP32Encoder *left_encoder, ESP32Encoder *right_encoder,
+           MPU6050 *mpu);
 
     // Timebase for all our digital filters, event to be raised every 5mS
     // TODO these definitions should be protected
@@ -75,7 +74,7 @@ class Segway {
     int turnLimit = 0; // Upper boundary for turn angle
     float turnError = 0; // Error term for PID calculation
     float turnPIDOutput = 0;
-    
+
     // Speed linear (forward/back) velocity PID, output updated every 50mS
     pidCoefficients speed = speedPIDDefaults;
     float velocity; // State variable for velocity PID calculation
@@ -94,14 +93,16 @@ class Segway {
     MPU6050 *mpu = nullptr;
 };
 
+// Segway class is a singleton
+extern Segway *robot;
+
 // Helm interface
 
 class Helm : public TCPServer {
   public:
-    Helm(const int port, Segway *robot);
+    Helm(const int port) : TCPServer(port, (TCPServer::service_t)service) {}
 
   private:
-    Segway *robot = nullptr;
     static void service(const Helm *p, const int fd);
 };
 
@@ -109,10 +110,9 @@ class Helm : public TCPServer {
 
 class Telemetry : public TCPServer {
   public:
-    Telemetry(const int port, const Segway *robot);
+    Telemetry(const int port) : TCPServer(port, (TCPServer::service_t)service) {}
 
   private:
-    const Segway *robot = nullptr;
     static void service(const Telemetry *p, const int fd);
 };
 
@@ -123,6 +123,7 @@ class Console : public TCPServer {
     Console(const int port);
 
   private:
-    int port = 0;
     static void service(const Console *p, const int fd);
+    static int pid(int argc, char **argv);
+    static int tilt(int argc, char **argv);
 };

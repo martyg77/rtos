@@ -1,17 +1,18 @@
 #include "Segway.h"
 
 #include <driver/timer.h>
-#include <freertos/task.h>
-
-#include <argtable3/argtable3.h>
 #include <driver/uart.h>
 #include <esp_console.h>
 #include <esp_log.h>
+#include <freertos/task.h>
 #include <linenoise/linenoise.h>
 #include <string.h>
 
 // TODO Arduino artifacts, where is esp-idf/freertos equivalent
 #define constrain(amt,low,high) ((amt)<(low)?(low):((amt)>(high)?(high):(amt)))
+
+// Segway class is a singleton
+Segway *robot = nullptr;
 
 // Tilt (vertical balancing) angle PID
 // This code runs every 5mS
@@ -21,7 +22,7 @@
 float Segway::tiltPID() {
     const int mpu_gyro_scaling = 131; // internal units -> degree (FS_SEL=0)
     const int mpu_accel_scaling = 16384; // internal units -> g (AFS_SEL= 0)
-    UNUSED(mpu_accel_scaling);
+    UNUSED(mpu_accel_scaling); // Suppress compiler warning
     const float radians2degrees = 180 / M_PI;
 
     int16_t accelX, accelY, accelZ; // raw 3-axis accelerometer (internal unit)
@@ -174,8 +175,6 @@ void Segway::resetPidCoefficients() {
     turn = turnPIDDefaults;
 }
 
-// Class constructor
-
 Segway::Segway(Motor *lm,  Motor *rm, ESP32Encoder *le, ESP32Encoder *re, MPU6050 *m) {
     left_motor = lm;
     right_motor = rm;
@@ -186,14 +185,10 @@ Segway::Segway(Motor *lm,  Motor *rm, ESP32Encoder *le, ESP32Encoder *re, MPU605
     stop();
     resetPidCoefficients();
 
-    xTaskCreate((TaskFunction_t)segwayProcess, "segway", configMINIMAL_STACK_SIZE * 4, this, 5, &task);
+    xTaskCreate((TaskFunction_t)segwayProcess, "segway", configMINIMAL_STACK_SIZE * 4, this, 6, &task);
 }
 
 // Helm interface 
-
-Helm::Helm(const int port, Segway *r) : TCPServer(port, (TCPServer::service_t)service) {
-    robot = r;
-}
 
 void Helm::service(const Helm *p, const int fd) {
     char c;
@@ -205,19 +200,19 @@ void Helm::service(const Helm *p, const int fd) {
         ESP_LOGW(TAG, "%c", c);
         switch (c) {
         case '2':
-            p->robot->speedSetPoint -= 25;
+            robot->speedSetPoint -= 25;
             break;
         case '4':
-            p->robot->turnSetPoint = (p->robot->turnSetPoint - 30) % 360;
+            robot->turnSetPoint = (robot->turnSetPoint - 30) % 360;
             break;
         case '6':
-            p->robot->turnSetPoint = (p->robot->turnSetPoint + 30) % 360;
+            robot->turnSetPoint = (robot->turnSetPoint + 30) % 360;
             break;
         case '8':
-            p->robot->speedSetPoint += 25;
+            robot->speedSetPoint += 25;
             break;
         default:
-            p->robot->stop();
+            robot->stop();
             break;
         }
     }
@@ -225,29 +220,46 @@ void Helm::service(const Helm *p, const int fd) {
 
 // Telemetry interface
 
-Telemetry::Telemetry(const int port, const Segway *r) : TCPServer(port, (TCPServer::service_t)service) {
-    robot = r;
-}
-
 void Telemetry::service(const Telemetry *p, const int fd) {
     while (true) {
-        int x = dprintf(fd, "%i | %.1f %.1f | %.1f | %.1f %.1f %.1f | %i %i\n",
+        int x = printf("%i | %.1f %.1f | %.1f | %.1f %.1f %.1f | %i %i\n",
                         xTaskGetTickCount(),
-                        p->robot->Gyro_x, p->robot->Angle_x, p->robot->Angle,
-                        p->robot->tiltPIDOutput, p->robot->speedPIDOutput, p->robot->turnPIDOutput,
-                        p->robot->leftMotorPWM, p->robot->rightMotorPWM);
+                        robot->Gyro_x, robot->Angle_x, robot->Angle,
+                        robot->tiltPIDOutput, robot->speedPIDOutput, robot->turnPIDOutput,
+                        robot->leftMotorPWM, robot->rightMotorPWM);
         if (x < 0) return;
         vTaskDelay(100 / portTICK_PERIOD_MS);
     }
 }
 
 // Console interface
+    
+static struct {
+    struct arg_dbl *Kp = arg_dbl1(nullptr, nullptr, "<Kp>", "PID proportional gain");
+    struct arg_dbl *Ki = arg_dbl1(nullptr, nullptr, "<Ki>", "PID integral gain");
+    struct arg_dbl *Kd = arg_dbl1(nullptr, nullptr, "<Kd>", "PID differential gain");
+    struct arg_end *end = arg_end(5);
+} tilt_args;
+
+int Console::tilt(int argc, char **argv) {
+    if (arg_parse(argc, argv, (void **)&tilt_args) > 0) {
+        arg_print_errors(stdout, tilt_args.end, argv[0]);
+        return 1;
+    }
+
+    robot->tilt.Kp = tilt_args.Kp->dval[0];
+    robot->tilt.Ki = tilt_args.Ki->dval[0];
+    robot->tilt.Kd = tilt_args.Kd->dval[0];
+
+    return 0;
+}
+
+int Console::pid(int argc, char **argv) {
+    printf("Tilt: Kp %.2f Ki %.2f Kd %.2f\n", robot->tilt.Kp, robot->tilt.Ki, robot->tilt.Kd);
+    return 0;
+}
 
 void Console::service(const Console *p, const int fd) {
-
-    stdin = fdopen(p->accepted_fd, "r");
-    stdout = fdopen(p->accepted_fd, "w");
-
     char s[256];
     int rc;
 
@@ -256,7 +268,7 @@ void Console::service(const Console *p, const int fd) {
         strtok(s, "\r"); // Strip trailing carriage return
         esp_err_t err = esp_console_run(s, &rc);
         if (err == ESP_ERR_NOT_FOUND) {
-            printf("Unrecognized command\n");
+            printf("Unrecognized command: %s\n", s);
         } else if (err == ESP_ERR_INVALID_ARG) {
             // command was empty
         } else if (err == ESP_OK && rc != ESP_OK) {
@@ -266,40 +278,9 @@ void Console::service(const Console *p, const int fd) {
         }
         fflush(stdout);
     }
-    fclose(stdin);
-    fclose(stdout);
-}
-
-static float Kp, Ki, Kd;
-
-static struct {
-    struct arg_dbl *Kp = arg_dbl1(nullptr, nullptr, "<Kp>", "PID proportional gain");
-    struct arg_dbl *Ki = arg_dbl1(nullptr, nullptr, "<Ki>", "PID integral gain");
-    struct arg_dbl *Kd = arg_dbl1(nullptr, nullptr, "<Kd>", "PID differential gain");
-    struct arg_end *end = arg_end(5);
-} tilt_args;
-
-int tilt(int argc, char **argv) {
-    if (arg_parse(argc, argv, (void **)&tilt_args) > 0) {
-        arg_print_errors(stdout, tilt_args.end, argv[0]);
-        return 1;
-    }
-
-    Kp = tilt_args.Kp->dval[0];
-    Ki = tilt_args.Ki->dval[0];
-    Kd = tilt_args.Kd->dval[0];
-
-    return 0;
-}
-
-int pid(int argc, char **argv) {
-    printf("Tilt: Kp %f Ki %f Kd %f\n", Kp, Ki, Kd);
-    return 0;
 }
 
 Console::Console(const int p) : TCPServer(p, (TCPServer::service_t)service) {
-    port = p;
-
     esp_console_config_t console_config = ESP_CONSOLE_CONFIG_DEFAULT();
     esp_console_init(&console_config);
 
@@ -310,7 +291,7 @@ Console::Console(const int p) : TCPServer(p, (TCPServer::service_t)service) {
         .help = "Adjust tilt PID gains",
         .hint = nullptr,
         .func = tilt,
-        .argtable = (void *)&tilt_args,
+        .argtable = &tilt_args,
     };
     esp_console_cmd_register(&tilt_cmd);
 

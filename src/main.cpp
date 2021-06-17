@@ -1,5 +1,4 @@
 #include "ESP32Encoder.h"
-#include "Echo.h"
 #include "Flasher.h"
 #include "Motor.h"
 #include "Segway.h"
@@ -124,20 +123,21 @@ void app_main() {
     MPU6050 mpu;
     mpu.initialize(); // TODO Where does MPU6050 _calibration_ take place?
 
-    Segway robot(&left_motor, &right_motor, &left_encoder, &right_encoder, &mpu);
+    robot = new Segway(&left_motor, &right_motor, &left_encoder, &right_encoder, &mpu);
 
     WiFi network;
-    network.state_cb = network_state_cb;
+    network.state_cb = network_state_cb; 
     network.connect(WIFI_SSID, WIFI_PASSWORD);
     while (!network.online) vTaskDelay(100 / portTICK_PERIOD_MS);
 
+    // TODO move to Segway constructor?
     Echo echo(3333);
-    Telemetry telemetry(4444, &robot);
-    Helm cockpit(5555, &robot);
+    Telemetry telemetry(4444);
+    Helm cockpit(5555);
     Console console(6666);
 
     vTaskDelay(2500 / portTICK_PERIOD_MS); // Allow time for robot to stablize after power-on
-    timer5mS_enable(&robot);
+    timer5mS_enable(robot);
 
     // This procedure must never return
     while (true) vTaskDelay(portMAX_DELAY);
