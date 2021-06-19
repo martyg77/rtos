@@ -34,6 +34,8 @@ class Segway {
     static const int handlerIntervalmS = 5; // milliSeconds
     TaskHandle_t task = nullptr;
     int tick = 0;
+    void serviceMotionApps();
+    void serviceMPU();
     float tiltPID();
     float turnPID();
     float speedPID();
@@ -65,6 +67,7 @@ class Segway {
     float Gyro_x, Gyro_y, Gyro_z; // 3-axis gyroscope (degrees)
     float Angle_x; // Estimated (noisy) tilt angle (degrees) about yz-plane
     float Angle; // Tilt angle (degrees) (noise filtered)
+    float tiltAcceleration = 0;
     float tiltPIDOutput = 0;
 
     // Turn (angular/turn/spin) velocity PID function, output updated every 20mS

@@ -5,6 +5,7 @@
 #include "WiFi.h"
 
 #include <MPU6050.h>
+#include <MPU6050_6Axis_MotionApps20.h>
 #include <assert.h>
 #include <driver/gpio.h>
 #include <driver/pcnt.h>
@@ -127,7 +128,13 @@ void app_main() {
 
     // Motion processor: SDA = GPIO_NUM_21; SCL = GPIO_NUM_22
     MPU6050 mpu;
-    mpu.initialize(); // TODO Where does MPU6050 _calibration_ take place?
+    mpu.initialize();
+    // mpu.dmpInitialize();
+    // mpu.setXGyroOffset(220); // TODO I have no idea what this does
+    // mpu.setYGyroOffset(76);
+    // mpu.setZGyroOffset(-85);
+    // mpu.setZAccelOffset(1788);
+    // mpu.setDMPEnabled(true);
 
     robot = new Segway(&left_motor, &right_motor, &left_encoder, &right_encoder, &mpu);
     Helm cockpit(5555);

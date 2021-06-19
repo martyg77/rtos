@@ -19,7 +19,10 @@ Segway *robot = nullptr;
 
 #define UNUSED(x) (void)(x) // Ref. https://stackoverflow.com/questions/3599160
 
-float Segway::tiltPID() {
+void Segway::serviceMotionApps() {}
+
+
+void Segway::serviceMPU() {
     const int mpu_gyro_scaling = 131; // internal units -> degree (FS_SEL=0)
     const int mpu_accel_scaling = 16384; // internal units -> g (AFS_SEL= 0)
     UNUSED(mpu_accel_scaling); // Suppress compiler warning
@@ -34,12 +37,16 @@ float Segway::tiltPID() {
     Gyro_y = gyroY / mpu_gyro_scaling; // TODO remove Gyro_[yz] if unused
     Gyro_z = gyroZ / mpu_gyro_scaling;
     Angle_x = atan2(accelY, accelZ) * radians2degrees;
+}
+
+float Segway::tiltPID() {
 
     // Calculate (noise filtered) tilt angle from mpu raw data
     Angle = kalmanfilter.Kalman_Filter(Angle_x, Gyro_x);
+    tiltAcceleration = kalmanfilter.angle_dot;
 
     // PID calculation
-    return tiltPIDOutput = tilt.Kp * (tiltSetPoint - Angle) + tilt.Kd * (0 - Gyro_x);
+    return tiltPIDOutput = tilt.Kp * (tiltSetPoint - Angle) + tilt.Kd * (0 - tiltAcceleration);
 }
 
 // Angular (turn/spin) velocity PID function
@@ -151,6 +158,7 @@ void segwayProcess(Segway *robot) {
         const int every20mS = 20 / robot->handlerIntervalmS; // Used to schedule turn PID
         const int every50mS = 50 / robot->handlerIntervalmS; // Used to schedule speed PID
         robot->tick = (robot->tick + 1) % (every20mS * every50mS); // Prevent integer overflow
+        robot->serviceMPU();
         robot->tiltPID();
         // if (!(robot->tick % every20mS)) robot->turnPID();
         // if (!(robot->tick % every50mS)) robot->speedPID();
@@ -212,11 +220,8 @@ void Helm::service(const Helm *p, const int fd) {
 
 void Telemetry::service(const Telemetry *p, const int fd) {
     while (true) {
-        int x = printf("%i | %.1f %.1f | %.1f | %.1f %.1f %.1f | %i %i\n",
-                        xTaskGetTickCount(),
-                        robot->Gyro_x, robot->Angle_x, robot->Angle,
-                        robot->tiltPIDOutput, robot->speedPIDOutput, robot->turnPIDOutput,
-                        robot->leftMotorPWM, robot->rightMotorPWM);
+        int x = printf("%.2f %.2f %.2f\n", robot->Angle, robot->tiltAcceleration, robot->tiltPIDOutput);
+
         if (x < 0) return;
         vTaskDelay(100 / portTICK_PERIOD_MS);
     }
