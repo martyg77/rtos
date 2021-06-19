@@ -20,7 +20,7 @@ class KalmanFilter {
     const float R_angle = 0.5; // Accelerometer covariance
     const float C_0 = 1.0;
 
-    float Kalman_Filter(float angle_m, float gyro_m);
+    float filter(float angle_m, float gyro_m);
     void Yiorderfilter(float angle_m, float gyro_m, float dt, float K1);
 
     // TODO obsolete
@@ -30,6 +30,7 @@ class KalmanFilter {
 
     // float accelz = 0;
 
+    float angle_accel;    
   private:
     float angle = 0.0;
     float angle6 = 0;
@@ -39,5 +40,4 @@ class KalmanFilter {
     float Pdot[4] = {0, 0, 0, 0};
     float P[2][2] = {{1, 0}, {0, 1}};
     float PCt_0, PCt_1, E, K_0, K_1, t_0, t_1;
-    float angle_dot;    
 };

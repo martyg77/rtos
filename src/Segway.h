@@ -4,7 +4,11 @@
 
 // Other vendors package the same kit but with different firmware, and different documentation
 // Ref. https://www.elegoo.com/collections/robot-kits/products/elegoo-tumbller-self-balancing-robot-car
-// Ref. https://wiki.keyestudio.com/Ks0193_keyestudio_Self-balancing_Car#Project_13:_Bluetooth_Control
+// Ref. https://wiki.keyestudio.com/Ks0193_keyestudio_Self-balancing_Car
+
+// Reference and background information
+// Ref. https://en.wikipedia.org/wiki/Inverted_pendulum
+// Ref. https://robotics.ee.uwa.edu.au/theses/2003-Balance-Ooi.pdf
 
 #pragma once
 
@@ -35,49 +39,44 @@ class Segway {
     TaskHandle_t task = nullptr;
     int tick = 0;
     float tiltPID();
-    float turnPID();
     float speedPID();
+    float turnPID();
     void setPWM();
 
+    // PID setpoints, ref. https://en.wikipedia.org/wiki/PID_controller
     // Robot movement is controlled by directly setting these signed registers
     int tiltSetPoint = 0; // (angular position about X-axis) This is the "balance" part; leave at zero
-    int turnSetPoint = 0; // (angular position about Z-axis) Heading
     int speedSetPoint = 0; // (linear velocity along Y-axis) stop=0, negative=reverse
+    int turnSetPoint = 0; // (angular position about Z-axis) Heading
     void stop(); // Resets the above to zero == dead stop
 
-    // *** Instrumentation interface for Bluetooth console below this line ***
-
-    // PID function coefficients
-    // Ref. https://en.wikipedia.org/wiki/PID_controller
-
+    // PID function coefficients, must be non-negative
     typedef struct {
         float Kp, Ki, Kd;
     } pidCoefficients;
 
     const pidCoefficients tiltPIDDefaults = {75.0, 0.0, 0.6};
+    const pidCoefficients speedPIDDefaults = {5.2, 0.25, 0.0};
     const pidCoefficients turnPIDDefaults = {23.0, 0.0, 0.3};
-    const pidCoefficients speedPIDDefaults = {5.2, 0.0, 0.0};
 
     // Tilt (vertical balancing) angle PID, output updated every 5mS
     // Inertial measurement apparatus yields current angular position in 3 dimensions
     pidCoefficients tilt = tiltPIDDefaults;
-    KalmanFilter kalmanfilter;
-    float Gyro_x, Gyro_y, Gyro_z; // 3-axis gyroscope (degrees)
-    float Angle_x; // Estimated (noisy) tilt angle (degrees) about yz-plane
-    float Angle; // Tilt angle (degrees) (noise filtered)
-    float tiltPIDOutput = 0;
-
-    // Turn (angular/turn/spin) velocity PID function, output updated every 20mS
-    pidCoefficients turn = turnPIDDefaults;
-    int turnLimit = 0; // Upper boundary for turn angle
-    float turnError = 0; // Error term for PID calculation
-    float turnPIDOutput = 0;
+    KalmanFilter kalman;
+    float GyroX, GyroY, GyroZ; // Unfiltered 3-axis angular velocity (degrees/sec)
+    float tiltAngle = 0; // Noise-filtered tilt angle (degrees)
+    float tiltAcceleration = 0; // Noise-filtered tilt angle velocity (degrees/second)
+    float tiltControl = 0;
 
     // Speed linear (forward/back) velocity PID, output updated every 50mS
     pidCoefficients speed = speedPIDDefaults;
-    float velocity; // State variable for velocity PID calculation
-    float distance; // Travelled since last PID calculation, estimated from encoders
-    float speedPIDOutput = 0;
+    float speedOMeter = 0; // Linear component for velocity PID calculation
+    float speedErrorIntegral = 0;
+    float speedControl = 0;
+
+    // Turn (angular/turn/spin) velocity PID function, output updated every 20mS
+    pidCoefficients turn = turnPIDDefaults;
+    float turnControl = 0;
 
     // Computed motor controls, output updated every 5mS
     int leftMotorPWM = 0;
@@ -94,27 +93,36 @@ class Segway {
 // Segway class is a singleton
 extern Segway *robot;
 
-// Helm interface
+// Helm
+// Numeric keypad interface for basic motion control
+// TODO integrate proportional controller (joystick, RC radio) for motion control
 
 class Helm : public TCPServer {
   public:
     Helm(const int port) : TCPServer(port, (TCPServer::service_t)service) {}
 
   private:
-    static void service(const Helm *p, const int fd);
+    static void service();
 };
 
-// Telemetry interface
+// Telemetry
+// Used to monitor performance data in real-time as the robot operates
+
+// feedgnuplot frontend works well to visulalize data on Unix
+// Ref. https://github.com/dkogan/feedgnuplot
+// e.g. nc segway 4444 | feedgnuplot -- stream
 
 class Telemetry : public TCPServer {
   public:
     Telemetry(const int port) : TCPServer(port, (TCPServer::service_t)service) {}
 
   private:
-    static void service(const Telemetry *p, const int fd);
+    static void service();
 };
 
-// Console interface
+// Console
+// Basic command-line interface
+// TODO linenoise editor/history support (Hangs on startup while figuring out line length)
 
 class Console : public TCPServer {
   public:
@@ -125,4 +133,6 @@ class Console : public TCPServer {
     static void parser();
     static int pid(int argc, char **argv);
     static int tilt(int argc, char **argv);
+    static int speed(int argc, char **argv);
+    static int turn(int argc, char **argv);
 };

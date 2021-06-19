@@ -12,7 +12,7 @@ void KalmanFilter::Yiorderfilter(float angle_m, float gyro_m, float dt, float K1
 
 /********************************kalman********************************/
 
-float KalmanFilter::Kalman_Filter(float angle_m, float gyro_m) {
+float KalmanFilter::filter(float angle_m, float gyro_m) {
     angle += (gyro_m - q_bias) * dt;
     angle_err = angle_m - angle;
     Pdot[0] = Q_angle - P[0][1] - P[1][0];
@@ -36,7 +36,7 @@ float KalmanFilter::Kalman_Filter(float angle_m, float gyro_m) {
     P[1][1] -= K_1 * t_1;
     angle += K_0 * angle_err; //���ŽǶ�
     q_bias += K_1 * angle_err;
-    angle_dot = gyro_m - q_bias; //���Ž��ٶ�
+    angle_accel = gyro_m - q_bias; //���Ž��ٶ�
     return angle;
 }
 
