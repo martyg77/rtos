@@ -19,8 +19,49 @@ Segway *robot = nullptr;
 
 #define UNUSED(x) (void)(x) // Ref. https://stackoverflow.com/questions/3599160
 
-void Segway::serviceMotionApps() {}
+// TODO make sure MPU is set to 100Hz rate (upstream defaults to 10Hz)
 
+void Segway::serviceMotionApps() {
+    const int packetSize = mpu->dmpGetFIFOPacketSize();
+
+    const uint8_t mpuIntStatus = mpu->getIntStatus();
+    const uint16_t fifoCount = mpu->getFIFOCount();
+    if (mpuIntStatus & 0x10) assert(0); // TODO handle MPU FIFO overflow
+    if (fifoCount < packetSize) return; // No data present or packet being assembled
+
+    // Consume new sample from MPU
+
+    uint8_t fifoBuffer[64]; // FIFO storage buffer
+    mpu->getFIFOBytes(fifoBuffer, packetSize);
+
+    Quaternion q; // Quaternion container [w, x, y, z]
+    VectorInt16 gyro; // Angular acceleration vector
+    VectorInt16 accel; // Linear acceleration vector
+    VectorFloat gravity; // Gravity vector [x, y, z]
+    float ypr[3]; // [yaw, pitch, roll]
+    const float radians2degrees = 180.0 / M_PI;
+    const float mpu_gyro_scaling = 131.0; // internal units -> degree/Sec (FS_SEL=0)
+
+    mpu->dmpGetQuaternion(&q, fifoBuffer);
+    mpu->dmpGetGravity(&gravity, &q);
+    mpu->dmpGetYawPitchRoll(ypr, &q, &gravity);
+    mpu->dmpGetGyro(&gyro, fifoBuffer);
+
+    // MPU is mounted such that x and y axis are reversed (rotated CCW 90 degrees)
+    // TODO angles recycle when robot upside-down (is gravity the wrong way?) (gimbal lock)
+    yaw = ypr[0] * radians2degrees;   // About z-axis, xy plane
+    pitch = ypr[2] * radians2degrees; // About x-axis, yz plane
+    roll = ypr[1] * radians2degrees;  // About y-axis, xz plane
+    Gyro_x = gyro.x / mpu_gyro_scaling;
+    Gyro_y = gyro.y / mpu_gyro_scaling;
+    Gyro_z = gyro.z / mpu_gyro_scaling;
+
+    // printf("%.2f %.2f %.2f\n", yaw, pitch, roll);
+    // printf("%.2f %.2f %.2f\n", Gyro_z, Gyro_x, Gyro_y);
+    // printf("\n");
+
+    tiltAcceleration = Gyro_x;
+}
 
 void Segway::serviceMPU() {
     const int mpu_gyro_scaling = 131; // internal units -> degree (FS_SEL=0)
@@ -37,16 +78,16 @@ void Segway::serviceMPU() {
     Gyro_y = gyroY / mpu_gyro_scaling; // TODO remove Gyro_[yz] if unused
     Gyro_z = gyroZ / mpu_gyro_scaling;
     Angle_x = atan2(accelY, accelZ) * radians2degrees;
+
+    // Calculate (noise filtered) tilt angle from mpu raw data
+    pitch = kalmanfilter.Kalman_Filter(Angle_x, Gyro_x);
+    tiltAcceleration = kalmanfilter.angle_dot;
 }
 
 float Segway::tiltPID() {
 
-    // Calculate (noise filtered) tilt angle from mpu raw data
-    Angle = kalmanfilter.Kalman_Filter(Angle_x, Gyro_x);
-    tiltAcceleration = kalmanfilter.angle_dot;
-
     // PID calculation
-    return tiltPIDOutput = tilt.Kp * (tiltSetPoint - Angle) + tilt.Kd * (0 - tiltAcceleration);
+    return tiltPIDOutput = tilt.Kp * (tiltSetPoint - pitch) + tilt.Kd * (0 - tiltAcceleration);
 }
 
 // Angular (turn/spin) velocity PID function
@@ -139,7 +180,7 @@ void Segway::setPWM() {
 
     // If the robot is about to fall over, or already lying on its side, stop both motors
     // TODO original code has stanza for robot being picked up, refers to kalmanfilter.angle6
-    if (abs(Angle) > 30) leftMotorPWM = rightMotorPWM = 0;
+    if (abs(pitch) > 30) leftMotorPWM = rightMotorPWM = 0;
 
     // Set speed and direction on both motors
     left_motor->run(leftMotorPWM);
@@ -158,7 +199,8 @@ void segwayProcess(Segway *robot) {
         const int every20mS = 20 / robot->handlerIntervalmS; // Used to schedule turn PID
         const int every50mS = 50 / robot->handlerIntervalmS; // Used to schedule speed PID
         robot->tick = (robot->tick + 1) % (every20mS * every50mS); // Prevent integer overflow
-        robot->serviceMPU();
+        // robot->serviceMPU();
+        robot->serviceMotionApps();
         robot->tiltPID();
         // if (!(robot->tick % every20mS)) robot->turnPID();
         // if (!(robot->tick % every50mS)) robot->speedPID();
@@ -220,7 +262,7 @@ void Helm::service(const Helm *p, const int fd) {
 
 void Telemetry::service(const Telemetry *p, const int fd) {
     while (true) {
-        int x = printf("%.2f %.2f %.2f\n", robot->Angle, robot->tiltAcceleration, robot->tiltPIDOutput);
+        int x = printf("%.2f %.2f %.2f\n", robot->pitch, robot->tiltAcceleration, robot->tiltPIDOutput);
 
         if (x < 0) return;
         vTaskDelay(100 / portTICK_PERIOD_MS);
@@ -248,6 +290,10 @@ int Console::tilt(int argc, char **argv) {
 
     return 0;
 }
+    
+static struct {
+    struct arg_end *end = arg_end(5);
+} pid_args;
 
 int Console::pid(int argc, char **argv) {
     printf("Tilt: Kp %.2f Ki %.2f Kd %.2f\n", robot->tilt.Kp, robot->tilt.Ki, robot->tilt.Kd);
@@ -333,7 +379,7 @@ Console::Console(const int p) : TCPServer(p, (TCPServer::service_t)service) {
         .help = "Display adjustable PID gains",
         .hint = nullptr,
         .func = pid,
-        .argtable = arg_end(5),
+        .argtable = &pid_args,
     };
     esp_console_cmd_register(&pid_cmd);
 }

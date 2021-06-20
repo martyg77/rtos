@@ -56,7 +56,7 @@ class Segway {
         float Kp, Ki, Kd;
     } pidCoefficients;
 
-    const pidCoefficients tiltPIDDefaults = {75.0, 0.0, 0.6};
+    const pidCoefficients tiltPIDDefaults = {50.0, 0.0, 0.6};
     const pidCoefficients turnPIDDefaults = {23.0, 0.0, 0.3};
     const pidCoefficients speedPIDDefaults = {5.2, 0.0, 0.0};
 
@@ -66,7 +66,7 @@ class Segway {
     KalmanFilter kalmanfilter;
     float Gyro_x, Gyro_y, Gyro_z; // 3-axis gyroscope (degrees)
     float Angle_x; // Estimated (noisy) tilt angle (degrees) about yz-plane
-    float Angle; // Tilt angle (degrees) (noise filtered)
+    float yaw, pitch, roll;
     float tiltAcceleration = 0;
     float tiltPIDOutput = 0;
 

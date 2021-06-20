@@ -129,12 +129,6 @@ void app_main() {
     // Motion processor: SDA = GPIO_NUM_21; SCL = GPIO_NUM_22
     MPU6050 mpu;
     mpu.initialize();
-    // mpu.dmpInitialize();
-    // mpu.setXGyroOffset(220); // TODO I have no idea what this does
-    // mpu.setYGyroOffset(76);
-    // mpu.setZGyroOffset(-85);
-    // mpu.setZAccelOffset(1788);
-    // mpu.setDMPEnabled(true);
 
     robot = new Segway(&left_motor, &right_motor, &left_encoder, &right_encoder, &mpu);
     Helm cockpit(5555);
@@ -143,6 +137,13 @@ void app_main() {
 
     vTaskDelay(2500 / portTICK_PERIOD_MS); // Allow time for robot to stablize after power-on
     timer5mS_enable(robot);
+
+    mpu.dmpInitialize();
+    // mpu.setXGyroOffset(220); // TODO I have no idea what this does
+    // mpu.setYGyroOffset(76);
+    // mpu.setZGyroOffset(-85);
+    // mpu.setZAccelOffset(1788);
+    mpu.setDMPEnabled(true);
 
     // This procedure must never return
     while (true) vTaskDelay(portMAX_DELAY);
