@@ -127,7 +127,16 @@ void app_main() {
 
     // Motion processor: SDA = GPIO_NUM_21; SCL = GPIO_NUM_22
     MPU6050 mpu;
-    mpu.initialize(); // TODO Where does MPU6050 _calibration_ take place?
+    mpu.initialize();
+
+    // MPU6050 default offset configuration
+    // Ref. https://github.com/jrowberg/i2cdevlib/tree/master/Arduino/MPU6050/examples/IMU_Zero
+    mpu.setXAccelOffset(977);
+    mpu.setYAccelOffset(3041);
+    mpu.setZAccelOffset(1561);
+    mpu.setXGyroOffset(-53);
+    mpu.setYGyroOffset(35);
+    mpu.setZGyroOffset(3);
 
     robot = new Segway(&left_motor, &right_motor, &left_encoder, &right_encoder, &mpu);
     Helm cockpit(5555);
