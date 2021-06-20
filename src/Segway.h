@@ -63,9 +63,9 @@ class Segway {
     // Inertial measurement apparatus yields current angular position in 3 dimensions
     pidCoefficients tilt = tiltPIDDefaults;
     KalmanFilter kalman;
-    float GyroX, GyroY, GyroZ; // Unfiltered 3-axis angular velocity (degrees/sec)
+    float GyroX, GyroY, GyroZ; // Unfiltered 3-axis angular velocity (degrees/Sec)
     float tiltAngle = 0; // Noise-filtered tilt angle (degrees)
-    float tiltAcceleration = 0; // Noise-filtered tilt angle velocity (degrees/second)
+    float tiltAcceleration = 0; // Noise-filtered tilt velocity (degrees/Sec)
     float tiltControl = 0;
 
     // Speed linear (forward/back) velocity PID, output updated every 50mS

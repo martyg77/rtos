@@ -20,13 +20,13 @@ Segway *robot = nullptr;
 // This code runs every 5mS
 
 float Segway::tiltPID() {
-    const int mpu_gyro_scaling = 131; // internal units -> degree (FS_SEL=0)
-    const int mpu_accel_scaling = 16384; // internal units -> g (AFS_SEL= 0)
+    const int mpu_gyro_scaling = 131; // internal unit -> degree (FS_SEL=0)
+    const int mpu_accel_scaling = 16384; // internal unit -> g (AFS_SEL= 0)
     UNUSED(mpu_accel_scaling); // Suppress compiler warning
     const float radians2degrees = 180 / M_PI;
 
-    int16_t accelX, accelY, accelZ; // raw 3-axis accelerometer (internal unit)
-    int16_t gyroX, gyroY, gyroZ; // raw 3-axis gyroscope (internal unit)
+    int16_t accelX, accelY, accelZ; // raw 3-axis accelerometer (linear acceleration, internal unit)
+    int16_t gyroX, gyroY, gyroZ; // raw 3-axis gyroscope (angular acceleration, internal unit)
 
     // Retrieve raw 6-axis data from inertial sensor, normalize gyro angle to degrees
     // Ref. https://mjwhite8119.github.io/Robots/mpu6050
@@ -59,7 +59,7 @@ float Segway::speedPID() {
     // Filter speed samples through low-pass filter to yield indicated speed
     // Ref. https://en.wikipedia.org/wiki/Low-pass_filter#Simple_infinite_impulse_response_filter
     // Stated purpose is noise reduction for above samples, control interference with (of?) tilt feedback loop
-    // TODO I don't think this filter is neceesary with my hardware
+    // TODO I don't think this filter is necessary/ with my hardware
     float s = speedOMeter * 0.7  + delta * 0.3;
     speedOMeter = s;
 
@@ -105,7 +105,7 @@ void Segway::setPWM() {
 
 // Task mainline
 
-void segwayProcess(Segway *robot) {
+void segwayProcess(Segway *robot) {    
     while (true) {
         
         // Notification raised by timer interrupt every 5mS
@@ -118,7 +118,7 @@ void segwayProcess(Segway *robot) {
         robot->tiltPID();
         // if (!(robot->tick % every50mS)) robot->speedPID();
         // if (!(robot->tick % every20mS)) robot->turnPID();
-        robot->setPWM();
+        // robot->setPWM();
     }
 }
 
