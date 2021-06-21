@@ -89,8 +89,10 @@ void Segway::setPWM() {
     // Speed and turn terms are interference for tilt
     leftMotorPWM = (int)(-tiltControl - speedControl - turnControl);
     rightMotorPWM = (int)(-tiltControl - speedControl + turnControl);
-    leftMotorPWM = constrain(leftMotorPWM, -left_motor->duty_cycle_range, left_motor->duty_cycle_range);
-    rightMotorPWM = constrain(rightMotorPWM, -right_motor->duty_cycle_range, right_motor->duty_cycle_range);
+    // leftMotorPWM = constrain(leftMotorPWM, -left_motor->duty_cycle_range, left_motor->duty_cycle_range);
+    // rightMotorPWM = constrain(rightMotorPWM, -right_motor->duty_cycle_range, right_motor->duty_cycle_range);
+    leftMotorPWM = constrain(leftMotorPWM, -255, 255);
+    rightMotorPWM = constrain(rightMotorPWM, -255, 255);
 
     // If the robot is about to fall over, or already lying on its side, stop both motors
     if (abs(tiltAngle) > 30) leftMotorPWM = rightMotorPWM = 0;
