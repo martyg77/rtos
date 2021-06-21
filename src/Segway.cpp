@@ -20,30 +20,27 @@ Segway *robot = nullptr;
 // This code runs every 5mS
 
 float Segway::tiltPID() {
-    const int mpu_gyro_scaling = 131; // internal unit -> degree (FS_SEL=0)
-    const int mpu_accel_scaling = 16384; // internal unit -> g (AFS_SEL= 0)
+    const float mpu_gyro_scaling = 131; // internal unit -> degree (FS_SEL=0)
+    const float mpu_accel_scaling = 16384; // internal unit -> g (AFS_SEL= 0)
     UNUSED(mpu_accel_scaling); // Suppress compiler warning
     const float radians2degrees = 180 / M_PI;
 
-    int16_t accelX, accelY, accelZ; // raw 3-axis accelerometer (linear acceleration, internal unit)
-    int16_t gyroX, gyroY, gyroZ; // raw 3-axis gyroscope (angular acceleration, internal unit)
-
     // Retrieve raw 6-axis data from inertial sensor, normalize gyro angle to degrees
     // Ref. https://mjwhite8119.github.io/Robots/mpu6050
-    mpu->getMotion6(&accelX, &accelY, &accelZ, &gyroX, &gyroY, &gyroZ);
-    GyroX = gyroX / mpu_gyro_scaling; // Angular velocity about yz-plane (pitch)
-    GyroY = gyroY / mpu_gyro_scaling; // Angular velocity about xz-plane (roll)
-    GyroZ = gyroZ / mpu_gyro_scaling; // Angular velocity about xy-plane (yaw)
+    int16_t ax, ay, az; // raw 3-axis accelerometer (linear acceleration, internal unit)
+    int16_t gx, gy, gz; // raw 3-axis gyroscope (angular acceleration, internal unit)
+    mpu->getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
+    GyroX = gx / mpu_gyro_scaling; // Angular velocity about yz-plane (pitch)
+    GyroY = gy / mpu_gyro_scaling; // Angular velocity about xz-plane (roll)
+    GyroZ = gz / mpu_gyro_scaling; // Angular velocity about xy-plane (yaw)
 
     // Calculate (noise filtered) tilt angle from mpu raw data
-    // Complementary fitler - low pass accelerometer, high pass gyroscope
-    float AngleX = atan2(accelY, accelZ) * radians2degrees;
-    tiltAngle = kalman.filter(AngleX, GyroX);
-    const float error = tiltSetPoint - tiltAngle;
+    // Complementary filter - low pass accelerometer, high pass gyroscope
+    tiltAngle = kalman.filter(atan2(ay, az) * radians2degrees, GyroX);
     tiltAcceleration = kalman.angle_accel;
 
     // PID calculation
-    return tiltControl = tilt.Kp * error + tilt.Kd * -tiltAcceleration;
+    return tiltControl = tilt.Kp * (tiltSetPoint - tiltAngle) + tilt.Kd * -tiltAcceleration;
 }
 
 // Linear (forward/back) velocity feedback loop
@@ -118,7 +115,7 @@ void segwayProcess(Segway *robot) {
         robot->tiltPID();
         // if (!(robot->tick % every50mS)) robot->speedPID();
         // if (!(robot->tick % every20mS)) robot->turnPID();
-        // robot->setPWM();
+        robot->setPWM();
     }
 }
 
