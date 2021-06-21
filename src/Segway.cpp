@@ -8,8 +8,8 @@
 #include <string.h>
 
 // TODO Arduino artifact goodies, where is esp-idf/freertos equivalent
-#define constrain(amt,low,high) ((amt)<(low)?(low):((amt)>(high)?(high):(amt)))
-#define min(x,y) ((x)<(y)?(x):(y))
+#define constrain(amt, low, high) ((amt) < (low) ? (low) : ((amt) > (high) ? (high) : (amt)))
+#define min(x, y) ((x) < (y) ? (x) : (y))
 #define UNUSED(x) (void)(x) // Ref. https://stackoverflow.com/questions/3599160
 
 // Segway class is a singleton
@@ -49,7 +49,7 @@ float Segway::tiltPID() {
 // This code runs every 50mS
 
 float Segway::speedPID() {
-    
+
     // Estimate overall speed since last invocation, i.e. (d1-d0)/50mS
     int delta = min(left_encoder->delta(), right_encoder->delta());
 
@@ -57,7 +57,7 @@ float Segway::speedPID() {
     // Ref. https://en.wikipedia.org/wiki/Low-pass_filter#Simple_infinite_impulse_response_filter
     // Stated purpose is noise reduction for above samples, control interference with (of?) tilt feedback loop
     // TODO I don't think this filter is necessary/ with my hardware
-    float s = speedOMeter * 0.7  + delta * 0.3;
+    float s = speedOMeter * 0.7 + delta * 0.3;
     speedOMeter = s;
 
     // PID calculation
@@ -79,7 +79,7 @@ float Segway::turnPID() {
     return turnControl = turn.Kp * turnError + turn.Kd * -GyroZ;
 }
 
-// Superpose tilt/turn/speed control outputs and set motor speeds 
+// Superpose tilt/turn/speed control outputs and set motor speeds
 // TODO increase PWM resolution to 1024 (all in hardware, should cost nothing)
 // Note motors are mounted opposite each other, but wired backwards, so they move in same direction
 // This code runs every 5mS
@@ -87,24 +87,25 @@ float Segway::turnPID() {
 void Segway::setPWM() {
 
     // Speed and turn terms are interference for tilt
-    leftMotorPWM  = (int)(-tiltControl - speedControl - turnControl); 
+    leftMotorPWM = (int)(-tiltControl - speedControl - turnControl);
     rightMotorPWM = (int)(-tiltControl - speedControl + turnControl);
-    leftMotorPWM  = constrain(leftMotorPWM, -left_motor->duty_cycle_range, left_motor->duty_cycle_range);
+    leftMotorPWM = constrain(leftMotorPWM, -left_motor->duty_cycle_range, left_motor->duty_cycle_range);
     rightMotorPWM = constrain(rightMotorPWM, -right_motor->duty_cycle_range, right_motor->duty_cycle_range);
 
     // If the robot is about to fall over, or already lying on its side, stop both motors
     if (abs(tiltAngle) > 30) leftMotorPWM = rightMotorPWM = 0;
 
     // Set speed and direction on both motors
+    if (!motorEnable) return;
     left_motor->run(leftMotorPWM);
     right_motor->run(rightMotorPWM);
 }
 
 // Task mainline
 
-void segwayProcess(Segway *robot) {    
+void segwayProcess(Segway *robot) {
     while (true) {
-        
+
         // Notification raised by timer interrupt every 5mS
         ulTaskNotifyTake(true, portMAX_DELAY);
 
@@ -126,7 +127,7 @@ void Segway::stop() {
     right_motor->stop();
 }
 
-Segway::Segway(Motor *lm,  Motor *rm, ESP32Encoder *le, ESP32Encoder *re, MPU6050 *m) {
+Segway::Segway(Motor *lm, Motor *rm, ESP32Encoder *le, ESP32Encoder *re, MPU6050 *m) {
     left_motor = lm;
     right_motor = rm;
     left_encoder = le;
@@ -138,7 +139,7 @@ Segway::Segway(Motor *lm,  Motor *rm, ESP32Encoder *le, ESP32Encoder *re, MPU605
     xTaskCreate((TaskFunction_t)segwayProcess, "segway", configMINIMAL_STACK_SIZE * 4, this, 6, &task);
 }
 
-// Helm interface 
+// Helm interface
 
 void Helm::service() {
     int c;
@@ -176,7 +177,7 @@ void Telemetry::service() {
 }
 
 // Console interface
-    
+
 static struct {
     struct arg_dbl *Kp = arg_dbl1(nullptr, nullptr, "<Kp>", "PID proportional gain");
     struct arg_dbl *Ki = arg_dbl1(nullptr, nullptr, "<Ki>", "PID integral gain");
@@ -195,7 +196,7 @@ int Console::tilt(int argc, char **argv) {
     robot->tilt.Kd = tilt_args.Kd->dval[0];
     return 0;
 }
-    
+
 static struct {
     struct arg_dbl *Kp = arg_dbl1(nullptr, nullptr, "<Kp>", "PID proportional gain");
     struct arg_dbl *Ki = arg_dbl1(nullptr, nullptr, "<Ki>", "PID integral gain");
@@ -214,7 +215,7 @@ int Console::speed(int argc, char **argv) {
     robot->speed.Kd = speed_args.Kd->dval[0];
     return 0;
 }
-    
+
 static struct {
     struct arg_dbl *Kp = arg_dbl1(nullptr, nullptr, "<Kp>", "PID proportional gain");
     struct arg_dbl *Ki = arg_dbl1(nullptr, nullptr, "<Ki>", "PID integral gain");
@@ -233,7 +234,7 @@ int Console::turn(int argc, char **argv) {
     robot->turn.Kd = turn_args.Kd->dval[0];
     return 0;
 }
-    
+
 static struct {
     struct arg_end *end = arg_end(5);
 } pid_args;
@@ -242,6 +243,16 @@ int Console::pid(int argc, char **argv) {
     printf("Tilt: Kp %.2f Ki %.2f Kd %.2f\n", robot->tilt.Kp, robot->tilt.Ki, robot->tilt.Kd);
     printf("Speed: Kp %.2f Ki %.2f Kd %.2f\n", robot->speed.Kp, robot->speed.Ki, robot->speed.Kd);
     printf("Turn: Kp %.2f Ki %.2f Kd %.2f\n", robot->turn.Kp, robot->turn.Ki, robot->turn.Kd);
+    return 0;
+}
+
+static struct {
+    struct arg_int *enable = arg_int1(nullptr, nullptr, "<enable>", "");
+    struct arg_end *end = arg_end(5);
+} motor_args;
+
+int Console::motor(int argc, char **argv) {
+    robot->motorEnable = motor_args.enable->ival[0];
     return 0;
 }
 
@@ -341,4 +352,13 @@ Console::Console(const int p) : TCPServer(p, (TCPServer::service_t)service) {
         .argtable = &pid_args,
     };
     esp_console_cmd_register(&pid_cmd);
+
+    const esp_console_cmd_t motor_cmd = {
+        .command = "motor",
+        .help = "Enable drive motors",
+        .hint = nullptr,
+        .func = motor,
+        .argtable = &motor_args,
+    };
+    esp_console_cmd_register(&motor_cmd);
 }

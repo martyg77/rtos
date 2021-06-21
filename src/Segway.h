@@ -79,6 +79,7 @@ class Segway {
     float turnControl = 0;
 
     // Computed motor controls, output updated every 5mS
+    bool motorEnable = false;
     int leftMotorPWM = 0;
     int rightMotorPWM = 0;
 
@@ -132,6 +133,7 @@ class Console : public TCPServer {
     static void service();
     static void parser();
     static int pid(int argc, char **argv);
+    static int motor(int argc, char **argv);
     static int tilt(int argc, char **argv);
     static int speed(int argc, char **argv);
     static int turn(int argc, char **argv);
